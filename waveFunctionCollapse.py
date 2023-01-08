@@ -1,10 +1,17 @@
 import math
+import ntpath
 import queue
 from moviepy.editor import ImageSequenceClip
 import numpy as np
 from PIL import Image
 import os
 from matplotlib import pyplot as plt
+
+DEFAULT_FPS = 30
+
+DEFAULT_VIDEO_LENGTH = 6
+
+DEFAULT_OUT_VID_HEIGHT = 1000
 
 CONTRADICTION = -2
 WAVE_COLLAPSED = -1
@@ -322,27 +329,43 @@ def main(input_path, pattern_size, out_width, out_height):
     if SAVE_VIDEO:
         images = [image_from_coefficients(coefficient_matrix, patterns)[1]]
     while status != WAVE_COLLAPSED:
-        min_entropy_pos, coefficient_matrix, status = observe(coefficient_matrix, frequencies)
         iteration += 1
+        min_entropy_pos, coefficient_matrix, status = observe(coefficient_matrix, frequencies)
         if status == CONTRADICTION:
             print("\nfound contradiction")
             exit(-1)
+        collapsed, image = image_from_coefficients(coefficient_matrix, patterns)
+        progress_bar(out_height * out_width, collapsed)
+        if SAVE_VIDEO and not status == WAVE_COLLAPSED:
+            images.append(image)
         if status == WAVE_COLLAPSED:
             print("\nwave collapsed!")
-            save_iterations_to_video(images)
-            return show_iteration("final", patterns, coefficient_matrix)
-        if SAVE_VIDEO:
-            collapsed, image = image_from_coefficients(coefficient_matrix, patterns)
-            images.append(image)
-            progress_bar(out_height * out_width, collapsed)
-        if iteration % 20 == 0:
+            if SAVE_VIDEO:
+                images.append(image)
+                save_iterations_to_video(images)
+            return save_image(coefficient_matrix, input_path, patterns)
+
+        if iteration % 15 == 0:
             show_iteration(iteration, patterns, coefficient_matrix)
         coefficient_matrix = propagate(min_entropy_pos, coefficient_matrix, rules, directions)
 
 
+def save_image(coefficient_matrix, input_path, patterns):
+    w, h, _ = coefficient_matrix.shape
+    num_channels = patterns[0].ndim
+    final_image = patterns[np.where(coefficient_matrix[:, :])[2]][:, 0, 0, :].reshape(w, h, num_channels)
+
+    file_name = f"WFC_{ntpath.basename(input_path)}"
+    upscale_parameter = DEFAULT_OUT_VID_HEIGHT // final_image.shape[0]
+    upscale_size = (w * upscale_parameter, h * upscale_parameter)
+    im = Image.fromarray(final_image).resize(upscale_size, resample=Image.NONE)
+    im.save(file_name)
+    return final_image
+
+
 def initialize(input_path, out_height, out_width, pattern_size):
     directions = get_dirs(pattern_size)
-    im, pattern_to_freq = get_patterns(input_path, pattern_size, flip=False, rotate=False)
+    im, pattern_to_freq = get_patterns(input_path, pattern_size, flip=False, rotate=True)
     patterns, frequencies = np.array(np.array([to_ndarray(tup) for tup in pattern_to_freq.keys()])), \
                             list(pattern_to_freq.values())
     show_patterns(patterns, frequencies)
@@ -360,10 +383,15 @@ def show_iteration(iteration, patterns, coefficient_matrix):
 
 
 def save_iterations_to_video(images):
-    fps = len(images)//20
-    images = np.array(images).astype(np.int8)
-    clip = ImageSequenceClip(list(images * 255), fps=fps)
-    clip.write_gif('wfc.gif', fps=fps)
+    upscale_parameter = DEFAULT_OUT_VID_HEIGHT // images[0].shape[0]
+    time_sample_parameter = 1
+    if len(images) > DEFAULT_FPS * DEFAULT_VIDEO_LENGTH:
+        time_sample_parameter = len(images) // (DEFAULT_FPS * DEFAULT_VIDEO_LENGTH)
+    images = np.array(images)
+    images = np.kron(images[::time_sample_parameter, :, :, :] * 255, np.ones((upscale_parameter, upscale_parameter, 1)))
+    images = [images[i] for i in range(images.shape[0])]
+    clip = ImageSequenceClip(images, fps=DEFAULT_FPS)
+    clip.write_videofile('wfc.mp4', fps=DEFAULT_FPS)
 
 
 def image_from_coefficients(coefficient_matrix, patterns):
@@ -381,7 +409,7 @@ def image_from_coefficients(coefficient_matrix, patterns):
 
 def print_adjacency_rules(rules):
     """
-    todo doc
+    todo doc and
     :param rules:
     :return:
     """
@@ -397,7 +425,7 @@ def progress_bar(max, curr):
     print(f"\r|{bar}| {round(percentage, 2)}% ", end='\b')
 
 
-res = main('houses3.png', 4,80,80)
+res = main('image.png', 2, 25, 25)
 
 """
  to do tests:
