@@ -7,6 +7,10 @@ from PIL import Image
 import os
 from matplotlib import pyplot as plt
 
+RENDER = True
+
+NUM_OF_ITERATIONS_BETWEEN_RENDER = 15
+
 DEFAULT_FPS = 30
 
 DEFAULT_VIDEO_LENGTH = 6
@@ -41,7 +45,6 @@ def get_patterns(path, N, flip=True, rotate=True):
     if channels > 3:
         # If the array has more than 3 channels, reduce the number of channels to 3
         im = im[:, :, :3]
-        channels = 3
 
     # Generate a list of indices for the rows and columns of the image
     row_indices = np.arange(image_height - N + 1)
@@ -94,7 +97,7 @@ def save_patterns(patters, output_path):
     :param patters: a list of image tiles, each represented as a numpy array
     :param output_path: a string containing the path to the output directory
     """
-    # Create the output directory if it doesn'tup exist
+    # Create the output directory if it doesn't exist
     if not os.path.exists(output_path):
         os.makedirs(output_path)
 
@@ -117,8 +120,8 @@ def mask_with_offset(pattern, offset):
     x_offset, y_offset = offset
     if abs(x_offset) > len(pattern) or abs(y_offset) > len(pattern[0]):
         return np.array([[]])
-    return pattern[max(0, x_offset):min(len(pattern) + x_offset, len(pattern)),
-           max(0, y_offset):min(len(pattern[0]) + y_offset, len(pattern[0])), :]
+    return pattern[max(0, x_offset):min(len(pattern) + x_offset,
+                                        len(pattern)), max(0, y_offset):min(len(pattern[0]) + y_offset, len(pattern[0])), :]
 
 
 def check_for_match(p1, p2, offset):
@@ -126,7 +129,7 @@ def check_for_match(p1, p2, offset):
     :param p1: first pattern
     :param p2: second pattern
     :param offset: offset of the first pattern
-    :return: true if p2 equals to p1_ind with offset offset
+    :return: true if p2 equals to p1_ind with offset
     """
     p1_offset = mask_with_offset(p1, offset)
     p2_offset = mask_with_offset(p2, flip_dir(offset))
@@ -183,7 +186,7 @@ def show_patterns(patterns, freq):
         axs.imshow(patterns[m])
         axs.set_xticks([])
         axs.set_yticks([])
-        plt.title("weight: %.0f\nprob: %.2f" % (freq[m], freq[m] / freq_sum))
+        plt.title("weight: %.0f\n prob: %.2f" % (freq[m], freq[m] / freq_sum))  # todo change to fstring
     plt.show()
 
 
@@ -321,7 +324,7 @@ def collapse_cell(coefficient_matrix, frequencies, min_entropy_pos):
     return min_entropy_pos, coefficient_matrix
 
 
-def main(input_path, pattern_size, out_width, out_height):
+def wave_function_collapse(input_path, pattern_size, out_width, out_height):
     # todo doc
     coefficient_matrix, directions, frequencies, patterns, rules = initialize(input_path, out_height, out_width, pattern_size)
     status = 1
@@ -340,12 +343,12 @@ def main(input_path, pattern_size, out_width, out_height):
             images.append(image)
         if status == WAVE_COLLAPSED:
             print("\nwave collapsed!")
+            show_iteration(iteration, patterns, coefficient_matrix)
             if SAVE_VIDEO:
                 images.append(image)
-                save_iterations_to_video(images)
+                save_iterations_to_video(images, input_path)
             return save_image(coefficient_matrix, input_path, patterns)
-
-        if iteration % 15 == 0:
+        if RENDER and iteration % NUM_OF_ITERATIONS_BETWEEN_RENDER == 0:
             show_iteration(iteration, patterns, coefficient_matrix)
         coefficient_matrix = propagate(min_entropy_pos, coefficient_matrix, rules, directions)
 
@@ -365,9 +368,9 @@ def save_image(coefficient_matrix, input_path, patterns):
 
 def initialize(input_path, out_height, out_width, pattern_size):
     directions = get_dirs(pattern_size)
-    im, pattern_to_freq = get_patterns(input_path, pattern_size, flip=False, rotate=True)
-    patterns, frequencies = np.array(np.array([to_ndarray(tup) for tup in pattern_to_freq.keys()])), \
-                            list(pattern_to_freq.values())
+    im, pattern_to_freq = get_patterns(input_path, pattern_size, flip=False, rotate=False)
+    patterns, frequencies = np.array(np.array([to_ndarray(tup) for tup in pattern_to_freq.keys()])), list(
+        pattern_to_freq.values())
     show_patterns(patterns, frequencies)
     rules = get_rules(patterns, directions)
     coefficient_matrix = np.full((out_height, out_width, len(patterns)), True, dtype=bool)
@@ -376,13 +379,16 @@ def initialize(input_path, out_height, out_width, pattern_size):
 
 def show_iteration(iteration, patterns, coefficient_matrix):
     collapsed, res = image_from_coefficients(coefficient_matrix, patterns)
-    plt.imshow(res)
-    plt.title = f"iteration number: {iteration}, cells collapsed: {collapsed}"
+    w, h, _ = res.shape
+    fig, axs = plt.subplots()
+    axs.imshow(res)
+    axs.set_title(f"cells collapsed: {collapsed} out of {w * h}, done {round(100 * collapsed / (w * h), 2)}%")
+    fig.suptitle(f"iteration number: {iteration}")
     plt.show()
     return res
 
 
-def save_iterations_to_video(images):
+def save_iterations_to_video(images, input_path):
     upscale_parameter = DEFAULT_OUT_VID_HEIGHT // images[0].shape[0]
     time_sample_parameter = 1
     if len(images) > DEFAULT_FPS * DEFAULT_VIDEO_LENGTH:
@@ -390,8 +396,9 @@ def save_iterations_to_video(images):
     images = np.array(images)
     images = np.kron(images[::time_sample_parameter, :, :, :] * 255, np.ones((upscale_parameter, upscale_parameter, 1)))
     images = [images[i] for i in range(images.shape[0])]
+    out_name = f"WFC_{ntpath.basename(input_path).split('.')[0]}.mp4"
     clip = ImageSequenceClip(images, fps=DEFAULT_FPS)
-    clip.write_videofile('wfc.mp4', fps=DEFAULT_FPS)
+    clip.write_videofile(out_name, fps=DEFAULT_FPS)
 
 
 def image_from_coefficients(coefficient_matrix, patterns):
@@ -425,34 +432,4 @@ def progress_bar(max, curr):
     print(f"\r|{bar}| {round(percentage, 2)}% ", end='\b')
 
 
-res = main('image.png', 2, 25, 25)
-
-"""
- to do tests:
- 1. test different pattern sizes
- 2. test handling small and large inputs
- 3. 
-"""
-
-# num_patterns, w, h = 9, 10, 10
-# e = np.random.randint(0, 2, (w, h, num_patterns), bool)
-# freq = [np.random.randint(1, 15) for _ in range(num_patterns)]
-# res = observe(e, freq)
-# e = np.full((w, h, num_patterns), 0, bool)
-# freq = [np.random.randint(1, 15) for _ in range(num_patterns)]
-# res1 = observe(e, freq)
-# e = np.full((w, h, num_patterns), 0, bool)
-# for i in range(w):
-#     for j in range(h-1):
-#         e[i, j, np.random.randint(0, num_patterns)] = True
-#     e[i,9,1] = True
-#     e[i,9,0] = True
-# freq = [np.random.randint(1, 15) for _ in range(num_patterns)]
-# res1 = observe(e, freq)
-# print(1)
-# e = np.full((25, 25, 9), True, dtype=bool)
-# # e[10, 15, 3] = False
-# e[9, 14, 3] = False
-# e[1, 2, :] = False
-# freq = [1, 2, 2, 4, 1, 2, 1, 2, 1]
-# res = get_min_entropy_coordinates(e, freq)
+res = wave_function_collapse('houses4.png', 3, 70, 70)
