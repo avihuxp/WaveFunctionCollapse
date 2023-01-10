@@ -1,28 +1,29 @@
 import math
 import ntpath
 import queue
+from typing import List, Tuple
+
 from moviepy.editor import ImageSequenceClip
 import numpy as np
 from PIL import Image
 import os
 from matplotlib import pyplot as plt
 
-RENDER = True
-
+# todo doc
+RENDER_ITERATIONS = True
 NUM_OF_ITERATIONS_BETWEEN_RENDER = 15
 
+SAVE_VIDEO = True
 DEFAULT_FPS = 30
-
 DEFAULT_VIDEO_LENGTH = 6
-
 DEFAULT_OUT_VID_HEIGHT = 1000
 
 CONTRADICTION = -2
 WAVE_COLLAPSED = -1
 RUNNING = 0
-SAVE_VIDEO = True
 
 
+# todo partition code into logical sections - preprocessing, iterations, post processing, output handling
 def get_patterns(path, N, flip=True, rotate=True):
     """
     Extracts N by N subimages from an image and returns a list of the subimages.
@@ -74,7 +75,11 @@ def get_patterns(path, N, flip=True, rotate=True):
 
 
 def to_tuple(array):
-    # todo doc
+    """
+    Convert array to tuple.
+    :param array: The array to be converted. Can be a NumPy ndarray or a nested sequence.
+    :return: The input array as a tuple with the same structure.
+    """
     if isinstance(array, np.ndarray):
         return tuple(map(to_tuple, array))
     else:
@@ -82,40 +87,50 @@ def to_tuple(array):
 
 
 def to_ndarray(tup):
-    # todo doc
+    """
+    Convert tuple to NumPy ndarray.
+    :param tup: The tuple to be converted. Can be a nested tuple.
+    :return: The input tuple as a NumPy ndarray with the same structure.
+    """
     if isinstance(tup, tuple):
         return np.array(list(map(to_ndarray, tup)))
     else:
         return tup
 
 
-# todo create a dictionary that maps each tile to its probability
-
-def save_patterns(patters, output_path):
+def save_patterns(patterns: np.ndarray, freq: List[int], output_path: str) -> None:
     """
     Saves a list of image tiles to new image files in a given output path.
-    :param patters: a list of image tiles, each represented as a numpy array
-    :param output_path: a string containing the path to the output directory
+    :param patterns: A list of image tiles, each represented as a numpy array.
+    :param freq: A list with the number of occurrences of pattern i in the i'th place.
+    :param output_path: A string containing the path to the output directory.
     """
     # Create the output directory if it doesn't exist
     if not os.path.exists(output_path):
         os.makedirs(output_path)
 
-    # Iterate through the image tiles and save each one to a new image file
-    for i, tile in enumerate(patters):
-        # Convert the numpy array to a PIL image
-        im = Image.fromarray(tile)
+    sum_of_freq = sum(freq)
+    for i in range(len(patterns)):
+        fig, axs = plt.subplots()
+        axs.imshow(patterns[i])
+        axs.set_title(f"pattern No. {i + 1}")
+        axs.set_xticks([])
+        axs.set_yticks([])
+        fig.suptitle(f"Number of occurrences: {freq[i]}, probability: {round(freq[i] / sum_of_freq, 2)}")
+        plt.savefig(os.path.join(output_path, f'pattern_{i}.jpg'))
 
-        # Save the image to the output path
-        im.save(os.path.join(output_path, f'tile_{i}.jpg'))
 
-
-def mask_with_offset(pattern, offset):
+def mask_with_offset(pattern: np.ndarray, offset: Tuple[int, int]) -> np.ndarray:
     """
-    :param pattern: an N*N*channels ndarray
-    :param offset: a 2D vector
-    :return: a subarray of pattern, which is all entries
-    that are inside the intersection of the pattern with another pattern offset by offset
+    Get a subarray of a pattern based on an offset.
+
+    This function returns a subarray of `pattern`, which is all entries
+    that are inside the intersection of the `pattern` with another pattern
+    offset by `offset`.
+
+    :param pattern: an N*N*channels ndarray.
+    :param offset: a 2D vector.
+    :return: a subarray of `pattern` that intersects with another pattern by 'offset'.
     """
     x_offset, y_offset = offset
     if abs(x_offset) > len(pattern) or abs(y_offset) > len(pattern[0]):
@@ -136,10 +151,15 @@ def check_for_match(p1, p2, offset):
     return np.all(np.equal(p1_offset, p2_offset))
 
 
-def get_dirs(n):
+def get_dirs(n: int) -> List[Tuple[int, int]]:
     """
-    :param n: size of patterns
-    :return: all coordinates around the pattern
+    Get the coordinates around a pattern.
+    This function returns a list of all coordinates around a pattern of size `n`,
+    starting from the top left and ending at the bottom right. The center point
+    (0, 0) is excluded from the list.
+
+    :param n: The size of the pattern.
+    :return: A list of coordinates around the pattern.
     """
     dirs = [(i, j) for j in range(-n + 1, n) for i in range(-n + 1, n)]
     dirs.remove((0, 0))
@@ -147,7 +167,11 @@ def get_dirs(n):
 
 
 def flip_dir(d):
-    # todo doc
+    """
+    Fl
+    :param d:
+    :return:
+    """
     return tuple(-1 * i for i in d)
 
 
@@ -186,7 +210,7 @@ def show_patterns(patterns, freq):
         axs.imshow(patterns[m])
         axs.set_xticks([])
         axs.set_yticks([])
-        plt.title("weight: %.0f\n prob: %.2f" % (freq[m], freq[m] / freq_sum))  # todo change to fstring
+        plt.title(f"num of appearances: {freq[m]}\n prob: {round(freq[m] / freq_sum, 2)}")
     plt.show()
 
 
@@ -348,7 +372,7 @@ def wave_function_collapse(input_path, pattern_size, out_width, out_height):
                 images.append(image)
                 save_iterations_to_video(images, input_path)
             return save_image(coefficient_matrix, input_path, patterns)
-        if RENDER and iteration % NUM_OF_ITERATIONS_BETWEEN_RENDER == 0:
+        if RENDER_ITERATIONS and iteration % NUM_OF_ITERATIONS_BETWEEN_RENDER == 0:
             show_iteration(iteration, patterns, coefficient_matrix)
         coefficient_matrix = propagate(min_entropy_pos, coefficient_matrix, rules, directions)
 
@@ -368,10 +392,11 @@ def save_image(coefficient_matrix, input_path, patterns):
 
 def initialize(input_path, out_height, out_width, pattern_size):
     directions = get_dirs(pattern_size)
-    im, pattern_to_freq = get_patterns(input_path, pattern_size, flip=False, rotate=False)
+    im, pattern_to_freq = get_patterns(input_path, pattern_size, flip=False, rotate=True)
     patterns, frequencies = np.array(np.array([to_ndarray(tup) for tup in pattern_to_freq.keys()])), list(
         pattern_to_freq.values())
     show_patterns(patterns, frequencies)
+    save_patterns(patterns, frequencies, 'output')
     rules = get_rules(patterns, directions)
     coefficient_matrix = np.full((out_height, out_width, len(patterns)), True, dtype=bool)
     return coefficient_matrix, directions, frequencies, patterns, rules
@@ -432,4 +457,4 @@ def progress_bar(max, curr):
     print(f"\r|{bar}| {round(percentage, 2)}% ", end='\b')
 
 
-res = wave_function_collapse('houses4.png', 3, 70, 70)
+res = wave_function_collapse('image.png', 2, 25, 25)
