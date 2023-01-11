@@ -1,7 +1,7 @@
 import math
 import ntpath
 import queue
-from typing import List, Tuple
+from typing import List, Tuple, Dict, Set, Any, Union
 
 from moviepy.editor import ImageSequenceClip
 import numpy as np
@@ -24,10 +24,11 @@ RUNNING = 0
 
 
 # todo partition code into logical sections - preprocessing, iterations, post processing, output handling
-def get_patterns(path, N, flip=True, rotate=True):
+def get_patterns(path: str, N: int, flip: bool = True, rotate: bool = True) -> Tuple[Image, Dict[tuple[Any, ...], int]]:
     """
     Extracts N by N subimages from an image and returns a list of the subimages.
     Optionally includes flipped and rotated versions of the subimages.
+
     :param path: a string containing the path to the image file
     :param N: an integer specifying the size of the subimages
     :param flip: a boolean indicating whether to include flipped versions of the subimages (defaults to True)
@@ -61,6 +62,7 @@ def get_patterns(path, N, flip=True, rotate=True):
     # Optionally include flipped and rotated versions of the tiles
     flipped, rotated = [], []
     if flip:
+        # todo flip flips the channels and not the orientation
         flipped = [np.flip(pattern, axis=axis) for axis in [0, 1, -1] for pattern in patterns]
     if rotate:
         rotated = [np.rot90(pattern, k=k) for k in range(1, 4) for pattern in patterns]
@@ -74,9 +76,10 @@ def get_patterns(path, N, flip=True, rotate=True):
     return im, pattern_to_freq
 
 
-def to_tuple(array):
+def to_tuple(array: np.ndarray) -> Union[Tuple, np.ndarray]:
     """
     Convert array to tuple.
+
     :param array: The array to be converted. Can be a NumPy ndarray or a nested sequence.
     :return: The input array as a tuple with the same structure.
     """
@@ -86,9 +89,10 @@ def to_tuple(array):
         return array
 
 
-def to_ndarray(tup):
+def to_ndarray(tup: Tuple) -> Union[Tuple, np.ndarray]:
     """
     Convert tuple to NumPy ndarray.
+
     :param tup: The tuple to be converted. Can be a nested tuple.
     :return: The input tuple as a NumPy ndarray with the same structure.
     """
@@ -101,6 +105,7 @@ def to_ndarray(tup):
 def save_patterns(patterns: np.ndarray, freq: List[int], output_path: str) -> None:
     """
     Saves a list of image tiles to new image files in a given output path.
+
     :param patterns: A list of image tiles, each represented as a numpy array.
     :param freq: A list with the number of occurrences of pattern i in the i'th place.
     :param output_path: A string containing the path to the output directory.
@@ -123,10 +128,8 @@ def save_patterns(patterns: np.ndarray, freq: List[int], output_path: str) -> No
 def mask_with_offset(pattern: np.ndarray, offset: Tuple[int, int]) -> np.ndarray:
     """
     Get a subarray of a pattern based on an offset.
-
-    This function returns a subarray of `pattern`, which is all entries
-    that are inside the intersection of the `pattern` with another pattern
-    offset by `offset`.
+    This function returns a subarray of `pattern`, which is all entries that are inside the intersection of the `pattern`
+    with another pattern offset by `offset`.
 
     :param pattern: an N*N*channels ndarray.
     :param offset: a 2D vector.
@@ -139,8 +142,10 @@ def mask_with_offset(pattern: np.ndarray, offset: Tuple[int, int]) -> np.ndarray
                                         len(pattern)), max(0, y_offset):min(len(pattern[0]) + y_offset, len(pattern[0])), :]
 
 
-def check_for_match(p1, p2, offset):
+def check_for_match(p1: np.ndarray, p2: np.ndarray, offset: Tuple[int, int]) -> bool:
     """
+    checks whether 2 patterns with a given offset from each other match
+
     :param p1: first pattern
     :param p2: second pattern
     :param offset: offset of the first pattern
@@ -154,9 +159,8 @@ def check_for_match(p1, p2, offset):
 def get_dirs(n: int) -> List[Tuple[int, int]]:
     """
     Get the coordinates around a pattern.
-    This function returns a list of all coordinates around a pattern of size `n`,
-    starting from the top left and ending at the bottom right. The center point
-    (0, 0) is excluded from the list.
+    This function returns a list of all coordinates around a pattern of size `n`, starting from the top left and ending at
+    the bottom right. The center point (0, 0) is excluded from the list.
 
     :param n: The size of the pattern.
     :return: A list of coordinates around the pattern.
@@ -166,22 +170,24 @@ def get_dirs(n: int) -> List[Tuple[int, int]]:
     return dirs
 
 
-def flip_dir(d):
+def flip_dir(d: Tuple[int, int]) -> Tuple[int, int]:
     """
-    Fl
-    :param d:
-    :return:
+    Flips the direction of the given 2D vector d
+
+    :param d: A 2D vector
+    :return: The input vector multiplied by -1,-1
     """
-    return tuple(-1 * i for i in d)
+    return -1 * d[0], -1 * d[1]
 
 
-def get_rules(patterns, directions):
+def get_rules(patterns: np.ndarray, directions: List[Tuple[int, int]]) -> List[Dict[Tuple[int, int], Set[int]]]:
     """
-    creates the rules data structure, which is a list where entry i holds a dictionary that maps offset (x,y) to a set of
+    Creates the rules data structure, which is a list where entry i holds a dictionary that maps offset (x,y) to a set of
     indices of all patterns matching there
-    :param directions: an array of all surrounding possible offsets
-    :param patterns: the list of all the patterns
-    :return:the rules list
+
+    :param directions: An array of all surrounding possible offsets
+    :param patterns: The list of all the patterns
+    :return:The rules list
     """
     rules = [{dire: set() for dire in directions} for _ in range(len(patterns))]
     for i in range(len(patterns)):
@@ -193,16 +199,13 @@ def get_rules(patterns, directions):
     return rules
 
 
-def add_rule(direction, p1_ind, p2_ind, rules):
-    # todo doc
-    if direction in rules[p1_ind]:
-        rules[p1_ind][direction].append(p2_ind)
-    else:
-        rules[p1_ind][direction] = {p2_ind}
+def show_patterns(patterns: np.ndarray, freq: List[int]) -> None:
+    """
+    Display the patterns in a grid
 
-
-def show_patterns(patterns, freq):
-    # todo doc
+    :param patterns: A numpy array of patterns
+    :param freq: A list of integers representing the frequency of each pattern
+    """
     plt.figure(figsize=(10, 10))
     freq_sum = sum(freq)
     for m in range(len(patterns)):
@@ -214,12 +217,14 @@ def show_patterns(patterns, freq):
     plt.show()
 
 
-def get_min_entropy_coordinates(coefficient_matrix, frequencies):
+def get_min_entropy_coordinates(coefficient_matrix: np.ndarray, frequencies: List[int]) -> Tuple[int, int, int]:
     """
-    todo doc
-    :param coefficient_matrix:
-    :param frequencies:
-    :return:
+    Calculate the coordinates of the cell with the minimum entropy, and returns the row, column and the state of the wave (
+    collapsed/running)
+
+    :param coefficient_matrix: A matrix of coefficients representing the wave state
+    :param frequencies: List of frequencies of patterns in the wave
+    :return: Tuple of integers: row, column, state of wave (collapsed/running)
     """
     # Calculate the probability of each pattern
     prob = np.array(frequencies) / np.sum(frequencies)
@@ -245,48 +250,74 @@ def get_min_entropy_coordinates(coefficient_matrix, frequencies):
     return min_index[0], min_index[1], RUNNING
 
 
-def is_cell_collapsed(coefficient_matrix, cell_pos):
+def is_cell_collapsed(coefficient_matrix: np.ndarray, cell_pos: Tuple[int, int]) -> bool:
     """
-    todo doc
-    :param coefficient_matrix:
-    :param cell_pos:
-    :return:
+    Check if the cell located at `cell_pos` in the `coefficient_matrix` is collapsed.
+
+    :param coefficient_matrix:  A matrix of coefficients representing the wave state.
+    :param cell_pos: Tuple of integers representing the position of the cell in the matrix (x, y).
+    :return: A boolean indicating whether the cell is collapsed (True) or not (False).
     """
     return np.sum(coefficient_matrix[cell_pos[0], cell_pos[1], :]) == 1
 
 
-def propagate_cell(orig_cell, direction, coefficient_matrix, rules):
+def propagate_cell(orig_cell: Tuple[int, int], direction: Tuple[int, int], coefficient_matrix: np.ndarray,
+                   rules: List[Dict[Tuple[int, int], Set[int]]]) -> np.ndarray:
     """
-    todo doc
-    :param orig_cell:
-    :param direction:
-    :param coefficient_matrix:
-    :param rules:
-    :return:
-    """
-    adjacent_cell_pos = orig_cell[0] + direction[0], orig_cell[1] + direction[1]
-    valid_patterns_in_adjacent_cell = coefficient_matrix[adjacent_cell_pos]
-    possible_patterns_in_orig_cell = np.where(coefficient_matrix[orig_cell])[0]
-    possibilities_in_dir = np.full(coefficient_matrix[orig_cell].shape, False)
-    for pattern in possible_patterns_in_orig_cell:
-        for possibility in rules[pattern][direction]:
-            possibilities_in_dir[possibility] = True
+    Propagates patterns restrictions from one cell to an adjacent cell in a given direction according to a set of rules.
 
+    :param orig_cell: The position of the original cell (x, y) in the coefficient matrix
+    :param direction: The direction to propagate patterns in (dx, dy)
+    :param coefficient_matrix: A matrix of coefficients representing the possible patterns in each cell
+    :param rules: A list of dictionaries, where each dictionary represents the possible patterns that can be propagated in a
+    specific direction for a specific pattern in the original cell.
+    :return: The propagated patterns for the adjacent cell, in the form of a one cell in the matrix of coefficients
+    """
+    # Get the coordinates of the cell to which we will propagate
+    adjacent_cell_pos = orig_cell[0] + direction[0], orig_cell[1] + direction[1]
+
+    # Get all valid patterns of the cell to which we will propagate
+    valid_patterns_in_adjacent_cell = coefficient_matrix[adjacent_cell_pos]
+
+    # Get the patterns that are valid in the target cell, by index
+    possible_patterns_in_orig_cell = np.where(coefficient_matrix[orig_cell])[0]
+
+    # Create a vector full of False with the same shape as the target cell
+    possibilities_in_dir = np.zeros(coefficient_matrix[orig_cell].shape, bool)
+
+    # Accumulate all possible patterns in the direction
+    for pattern in possible_patterns_in_orig_cell:
+        possibilities_in_dir[list(rules[pattern][direction])] = True
+
+    # Multiply the target cell by possible patterns form original cell
     return np.multiply(possibilities_in_dir, valid_patterns_in_adjacent_cell)
 
 
-def in_matrix(pos, dims):
+def in_matrix(pos: Tuple[int, int], dims: Tuple[int, ...]) -> bool:
     """
-    todo doc
-    :param pos:
-    :param dims:
-    :return:
+    :param pos: A tuple of integers representing the position of an element in a matrix
+    :param dims: A tuple of integers representing the dimensions of the matrix
+    :return: A boolean indicating whether the given position is within the bounds of the matrix
     """
     return 0 <= pos[0] < dims[0] and 0 <= pos[1] < dims[1]
 
 
-def propagate(min_entropy_pos, coefficient_matrix, rules, directions):
-    # todo doc
+def propagate(min_entropy_pos: Tuple[int, int],
+              coefficient_matrix: np.ndarray,
+              rules: List[Dict[Tuple[int, int], Set[int]]],
+              directions: List[Tuple[int, int]]) -> np.ndarray:
+    """
+    This function preforms the propagation part of the wfc algorithm. after collapsing one cell in 'observe', this function
+    will propagate this change to all relevant cells.
+
+    :param min_entropy_pos: A tuple of integers representing the position of the cell that was collapsed in 'observe'
+    :param coefficient_matrix: A numpy array representing the matrix of coefficients of the entire wave
+    :param rules: A list of dictionaries, where each dictionary represents a pattern, and contains a mapping of directions to a
+    set of possible patterns in the direction from the pattern of the dict
+    :param directions: A list of tuples of integers representing the directions in which the cell is being propagated
+    :return: the updated coefficient matrix, after propagation
+    """
+    # create a queue of positions of cells to update
     propagation_queue = queue.Queue()
     propagation_queue.put(min_entropy_pos)
 
@@ -313,42 +344,58 @@ def propagate(min_entropy_pos, coefficient_matrix, rules, directions):
     return coefficient_matrix
 
 
-def observe(coefficient_matrix, frequencies):
-    # todo doc
+def observe(coefficient_matrix: np.ndarray, frequencies: List[int]) -> Tuple[Tuple[int, int], np.ndarray, int]:
+    """
+    The function preforms the 'observe' phase oof the wfc algorithm. it searches for the cell with the minimal entropy,
+    and collapses it, based on possible patterns in he cell and there respective frequencies.
+
+    :param coefficient_matrix: A numpy array representing the matrix of the wave
+    :param frequencies: A list of integers representing the frequency of each pattern withing the input image
+    :return: A tuple containing:
+     1. A tuple of integers representing the position of the cell with the lowest entropy.
+     2. An updated numpy array of the wave after the collapse.
+     3. An integer representing the status of the wave function.
+    """
     # If contradiction
     if np.any(~np.any(coefficient_matrix, axis=2)):
         return (-1, -1), coefficient_matrix, CONTRADICTION
     # Get min pos
     min_entropy_pos_x, min_entropy_pos_y, status = get_min_entropy_coordinates(coefficient_matrix, frequencies)
+    min_entropy_pos = (min_entropy_pos_x, min_entropy_pos_y)
     # If fully collapsed
     if status == WAVE_COLLAPSED:
         return (min_entropy_pos_x, min_entropy_pos_y), coefficient_matrix, WAVE_COLLAPSED
-    min_entropy_pos, coefficient_matrix = collapse_cell(coefficient_matrix, frequencies, (min_entropy_pos_x, min_entropy_pos_y))
+    # Collapse the cell at min_entropy_pos
+    coefficient_matrix = collapse_single_cell(coefficient_matrix, frequencies, min_entropy_pos)
     return min_entropy_pos, coefficient_matrix, RUNNING
 
 
-def collapse_cell(coefficient_matrix, frequencies, min_entropy_pos):
+def collapse_single_cell(coefficient_matrix: np.ndarray, frequencies: List[int],
+                         min_entropy_pos: Tuple[int, int]) -> np.ndarray:
     """
-    todo doc
-    todo rename
-    :param coefficient_matrix:
-    :param frequencies:
-    :param min_entropy_pos:
-    :return:
+    Collapses a single cell at min_entropy_pos to a single pattern, randomly weighted by the frequencies.
+
+    :param coefficient_matrix: A numpy array representing the matrix of the wave
+    :param frequencies: A list of integers representing the frequency of each pattern withing the input image
+    :param min_entropy_pos: the position of the cell to collapse
+    :return: the update matrix of the wave, with the cell collapsed
     """
     # Get indices of optional patterns at min_entropy_pos
     relevant_ind = np.where(coefficient_matrix[min_entropy_pos])[0]
+
     # Get frequencies for relevant patterns at min_entropy_pos
     relevant_freq = np.array(frequencies)[relevant_ind]
+
     # Collapse cell to a pattern randomly, weighted by the frequencies
     chosen_pattern_ind = np.random.choice(relevant_ind, p=relevant_freq / np.sum(relevant_freq))
+
     # Set possibility of all patterns other than the chosen pattern to False
     coefficient_matrix[min_entropy_pos] = np.full(coefficient_matrix[min_entropy_pos].shape[0], False, dtype=bool)
     coefficient_matrix[min_entropy_pos[0], min_entropy_pos[1], chosen_pattern_ind] = True
-    return min_entropy_pos, coefficient_matrix
+    return coefficient_matrix
 
 
-def wave_function_collapse(input_path, pattern_size, out_width, out_height):
+def wave_function_collapse(input_path, pattern_size, out_height, out_width):
     # todo doc
     coefficient_matrix, directions, frequencies, patterns, rules = initialize(input_path, out_height, out_width, pattern_size)
     status = 1
@@ -364,6 +411,8 @@ def wave_function_collapse(input_path, pattern_size, out_width, out_height):
         collapsed, image = image_from_coefficients(coefficient_matrix, patterns)
         progress_bar(out_height * out_width, collapsed)
         if SAVE_VIDEO and not status == WAVE_COLLAPSED:
+            # todo create function save_image_for_video, which saves image, before kron, and is called only for images needed
+            #  for video
             images.append(image)
         if status == WAVE_COLLAPSED:
             print("\nwave collapsed!")
@@ -396,7 +445,6 @@ def initialize(input_path, out_height, out_width, pattern_size):
     patterns, frequencies = np.array(np.array([to_ndarray(tup) for tup in pattern_to_freq.keys()])), list(
         pattern_to_freq.values())
     show_patterns(patterns, frequencies)
-    save_patterns(patterns, frequencies, 'output')
     rules = get_rules(patterns, directions)
     coefficient_matrix = np.full((out_height, out_width, len(patterns)), True, dtype=bool)
     return coefficient_matrix, directions, frequencies, patterns, rules
@@ -419,6 +467,7 @@ def save_iterations_to_video(images, input_path):
     if len(images) > DEFAULT_FPS * DEFAULT_VIDEO_LENGTH:
         time_sample_parameter = len(images) // (DEFAULT_FPS * DEFAULT_VIDEO_LENGTH)
     images = np.array(images)
+    # todo handle large images, by removing unnecessary dimensions
     images = np.kron(images[::time_sample_parameter, :, :, :] * 255, np.ones((upscale_parameter, upscale_parameter, 1)))
     images = [images[i] for i in range(images.shape[0])]
     out_name = f"WFC_{ntpath.basename(input_path).split('.')[0]}.mp4"
@@ -441,8 +490,8 @@ def image_from_coefficients(coefficient_matrix, patterns):
 
 def print_adjacency_rules(rules):
     """
-    todo doc and
-    :param rules:
+    Prints all adjacency rules
+    :param rules: The
     :return:
     """
     for i in range(len(rules)):
