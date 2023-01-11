@@ -10,6 +10,10 @@ from PIL.Image import Image
 import os
 from matplotlib import pyplot as plt
 
+WAVE_COLLAPSED_MSG = "\nwave collapsed!"
+
+FOUND_CONTRADICTION_MSG = "\nfound contradiction"
+
 # Render while running variables
 RENDER_ITERATIONS = True  # Set to True to render images in runtime
 NUM_OF_ITERATIONS_BETWEEN_RENDER = 15  # The number of iterations between rendering in runtime
@@ -26,8 +30,7 @@ WAVE_COLLAPSED = -1
 RUNNING = 0
 
 
-def generate_patterns_and_frequencies(path: str, N: int, flip: bool = True, rotate: bool = True) -> Tuple[
-    Image, Dict[tuple[Any, ...], int]]:
+def generate_patterns_and_frequencies(path: str, N: int, flip: bool = True, rotate: bool = True) -> Dict[tuple[Any, ...], int]:
     """
     Extracts N by N subimages from an image from a given path and returns a dictionary of patterns to their frequency.
     Optionally includes flipped and rotated versions of the subimages.
@@ -44,7 +47,7 @@ def generate_patterns_and_frequencies(path: str, N: int, flip: bool = True, rota
     im = np.array(Img.open(path))
 
     # Check if the array has more than 3 channels
-    if im.ndim > 3:
+    if im.shape[2] > 3:
         # If the array has more than 3 channels, reduce the number of channels to 3
         im = im[:, :, :3]
 
@@ -52,7 +55,7 @@ def generate_patterns_and_frequencies(path: str, N: int, flip: bool = True, rota
 
     patterns = [to_tuple(pattern) for pattern in patterns]
     pattern_to_freq = {item: patterns.count(item) for item in patterns}
-    return im, pattern_to_freq
+    return pattern_to_freq
 
 
 def get_patterns_from_image(im: np.ndarray, N: int, flip: bool = True, rotate: bool = True) -> List[np.ndarray]:
@@ -406,62 +409,147 @@ def collapse_single_cell(coefficient_matrix: np.ndarray, frequencies: List[int],
     return coefficient_matrix
 
 
-def wave_function_collapse(input_path, pattern_size, out_height, out_width):
-    # todo doc
-    coefficient_matrix, directions, frequencies, patterns, rules = initialize(input_path, out_height, out_width, pattern_size)
+# todo separate function from image opening, and with ability to handle CLI
+def wave_function_collapse(input_path: str, pattern_size: int, out_height: int, out_width: int) -> np.ndarray:
+    """
+    The main function of the program, will preform the wave function collapse algorithm.
+    Given an input image, the function will randomly generate an output image of any size, where each pixel in the output
+    image resembles a small, local environment in the input image.
+
+    :param input_path: The path of the input image of the algorithm, from which to extract the patterns
+    :param pattern_size: The size (width and height) of the patterns from the input image, should be as small as possible for
+    efficiency, but large enough to catch key features in the input image
+    :param out_height: The height of the output image
+    :param out_width: The width of the output image
+    :return: A numpy array representing the output image
+    """
+    # Get the initial coefficient_matrix, patterns, frequencies, rules and directions of offsets
+    coefficient_matrix, directions, frequencies, patterns, rules = initialize(input_path, pattern_size, out_height, out_width)
+
+    # Initialize control parameters
     status = 1
     iteration = 0
+
+    # If SAVE_VIDEO, initialize the images list
     if SAVE_VIDEO:
         images = [image_from_coefficients(coefficient_matrix, patterns)[1]]
+
+    # Iterate over the steps of the algorithm: observe, collapse, propagate until the wave collapses
     while status != WAVE_COLLAPSED:
         iteration += 1
+        # Observe and collapse
         min_entropy_pos, coefficient_matrix, status = observe(coefficient_matrix, frequencies)
+
         if status == CONTRADICTION:
-            print("\nfound contradiction")
+            print(FOUND_CONTRADICTION_MSG)
             exit(-1)
+
+        # todo - is necessary?
+        # Get current progress status
         collapsed, image = image_from_coefficients(coefficient_matrix, patterns)
+
+        # Update the progress bar
         progress_bar(out_height * out_width, collapsed)
+
+        # If SAVE_VIDEO, add current iteration to the images list
         if SAVE_VIDEO and not status == WAVE_COLLAPSED:
-            # todo create function save_image_for_video, which saves image, before kron, and is called only for images needed
-            #  for video
             images.append(image)
+
+        # If the wave collapsed, stop the iterations
         if status == WAVE_COLLAPSED:
-            print("\nwave collapsed!")
+            print(WAVE_COLLAPSED_MSG)
             show_iteration(iteration, patterns, coefficient_matrix)
+
+            # If SAVE_VIDEO, save the image list to a video
             if SAVE_VIDEO:
                 images.append(image)
                 save_iterations_to_video(images, input_path)
-            return save_image(coefficient_matrix, input_path, patterns)
+
+            # Save the output image and return it
+            return save_collapsed_wave(coefficient_matrix, input_path, patterns)
+
+        # If RENDER_ITERATIONS and NUM_OF_ITERATIONS_BETWEEN_RENDER passed from last render, render this iteration
         if RENDER_ITERATIONS and iteration % NUM_OF_ITERATIONS_BETWEEN_RENDER == 0:
             show_iteration(iteration, patterns, coefficient_matrix)
+
+        # Propagate
         coefficient_matrix = propagate(min_entropy_pos, coefficient_matrix, rules, directions)
 
 
-def save_image(coefficient_matrix, input_path, patterns):
+def save_collapsed_wave(coefficient_matrix: np.ndarray, input_path: str, patterns: np.ndarray) -> np.ndarray:
+    """
+    Saves an image of the collapsed wave, with width 1000 and preserves the aspect ratio
+    :param coefficient_matrix: The wave matrix
+    :param input_path: The path of the input image
+    :param patterns: The numpy array of the patterns
+    :return: An image of the collapsed wave
+    """
+    # Get the dimensions of the output image
     w, h, _ = coefficient_matrix.shape
     num_channels = patterns[0].ndim
+
+    # Create the output image as an array
     final_image = patterns[np.where(coefficient_matrix[:, :])[2]][:, 0, 0, :].reshape(w, h, num_channels)
 
+    # Calculate the upscale_parameter
+    upscale_parameter = (DEFAULT_OUT_VID_HEIGHT, (h * DEFAULT_OUT_VID_HEIGHT) // w)
+
+    # Create the image from the array and up sample it
+    im = Img.fromarray(final_image).resize(upscale_parameter, resample=Img.NONE)
+
+    # Save the image
     file_name = f"WFC_{ntpath.basename(input_path)}"
-    upscale_parameter = DEFAULT_OUT_VID_HEIGHT // final_image.shape[0]
-    upscale_size = (w * upscale_parameter, h * upscale_parameter)
-    im = Img.fromarray(final_image).resize(upscale_size, resample=Img.NONE)
     im.save(file_name)
     return final_image
 
 
-def initialize(input_path, out_height, out_width, pattern_size):
+def initialize(input_path: str,
+               pattern_size: int,
+               out_height: int,
+               out_width: int) -> Tuple[np.ndarray, List[Tuple[int, int]], List[int], np.ndarray, List[Dict[Tuple[int, int],
+                                                                                                            Set[int]]]]:
+    """
+    Preforms the initialization phase of the wfc algorithm, namely - aggregate the patterns from the input image,
+    calculate their frequencies and initiate the coefficient_matrix
+    :param input_path: The path to the input image
+    :param pattern_size: The size (width and height) of the patterns from the input image, should be as small as possible for
+    efficiency, but large enough to catch key features in the input image
+    :param out_height: The height of the output image
+    :param out_width: The width of the output image
+    :return: A tuple of:
+        1. The wave matrix
+        2. A list of all possible offsets for the patterns
+        3. A list of all the frequencies of all the patterns
+        4. A ndarray of the patterns
+        5. A list of all the rules of adjacency for every pattern
+    """
+    # Get all possible offset directions for patterns
     directions = get_dirs(pattern_size)
-    im, pattern_to_freq = generate_patterns_and_frequencies(input_path, pattern_size, flip=False, rotate=True)
+
+    # Get a dictionary mapping patterns to their respective frequencies, then separate them
+    pattern_to_freq = generate_patterns_and_frequencies(input_path, pattern_size, flip=False, rotate=True)
     patterns, frequencies = np.array(np.array([to_ndarray(tup) for tup in pattern_to_freq.keys()])), list(
         pattern_to_freq.values())
-    show_patterns(patterns, frequencies)
+    # Optional: show all patterns aggregated
+    # show_patterns(patterns, frequencies)
+
+    # get all the rules of adjacency for all patterns
     rules = get_rules(patterns, directions)
+
+    # init the coefficient_matrix, representing  the wave function
     coefficient_matrix = np.full((out_height, out_width, len(patterns)), True, dtype=bool)
     return coefficient_matrix, directions, frequencies, patterns, rules
 
 
-def show_iteration(iteration, patterns, coefficient_matrix):
+def show_iteration(iteration: int, patterns: np.ndarray, coefficient_matrix: np.ndarray) -> np.ndarray:
+    """
+    Shows the state of the wave in this iteration of the algorithm
+    :param iteration: The iteration of the algorithm
+    :param patterns: The ndarray of the patterns
+    :param coefficient_matrix: The ndarray representing the wave
+    :return: an ndarray representing the image of the wave in the current iterations, all un-collapsed cells are with the
+    mean color of all the valid patterns for the cell.
+    """
     collapsed, res = image_from_coefficients(coefficient_matrix, patterns)
     w, h, _ = res.shape
     fig, axs = plt.subplots()
@@ -472,38 +560,63 @@ def show_iteration(iteration, patterns, coefficient_matrix):
     return res
 
 
-def save_iterations_to_video(images, input_path):
+def save_iterations_to_video(images: List[np.ndarray], input_path: str) -> None:
+    """
+    Saves all the images of iterations of the algorithm to a video
+    :param images: A list of ndarrays of the sate of the wave during iterations of the algorithm
+    :param input_path: The path of the input image
+    """
+    # Calculate the upscale_parameter for the video
     upscale_parameter = DEFAULT_OUT_VID_HEIGHT // images[0].shape[0]
+
+    # Calculate the time_sample_parameter for the video, so that the output video will be in DEFAULT_FPS fps
     time_sample_parameter = 1
     if len(images) > DEFAULT_FPS * DEFAULT_VIDEO_LENGTH:
         time_sample_parameter = len(images) // (DEFAULT_FPS * DEFAULT_VIDEO_LENGTH)
+
+    # Upscale and subsample over time the images list
     images = np.array(images)
-    # todo handle large images, by removing unnecessary dimensions
-    images = np.kron(images[::time_sample_parameter, :, :, :] * 255, np.ones((upscale_parameter, upscale_parameter, 1)))
+    images = np.kron(images[::time_sample_parameter, :, :, :], np.ones((upscale_parameter, upscale_parameter, 1)))
     images = [images[i] for i in range(images.shape[0])]
+
+    # Save the output video
     out_name = f"WFC_{ntpath.basename(input_path).split('.')[0]}.mp4"
     clip = ImageSequenceClip(images, fps=DEFAULT_FPS)
     clip.write_videofile(out_name, fps=DEFAULT_FPS)
 
 
-def image_from_coefficients(coefficient_matrix, patterns):
+def image_from_coefficients(coefficient_matrix: np.ndarray, patterns: np.ndarray) -> Tuple[int, np.ndarray]:
+    """
+    Generates an image of the state of the wave function mid-run. every cell is the mean of all valid patterns for it
+    :param coefficient_matrix: The ndarray of the wave function
+    :param patterns: The ndarray of the patterns
+    :return: A tuple:
+        1. The number of collapsed cells in the coefficient_matrix
+        2. The image of the state of the wave function
+    """
+    # todo find a more efficient way to do this
     r, c, num_patterns = coefficient_matrix.shape
+
+    # Create the resulting image of the wave function
     res = np.empty((r, c, 3))
-    collapsed = 0
+
+    # Iterate over all cells of coefficient_matrix
     for row in range(r):
         for col in range(c):
+            # For each cell, find the valid patterns in it
             valid_patterns = np.where(coefficient_matrix[row, col])[0]
-            if len(valid_patterns) == 1:
-                collapsed += 1
-            res[row, col] = np.mean(patterns[valid_patterns], axis=0)[0, 0] / 255
-    return collapsed, res
+
+            # Assign the corresponding cell in the output to be the mean of all valid patterns in the cell
+            res[row, col] = np.mean(patterns[valid_patterns], axis=0)[0, 0]
+
+    # Return the number of collapsed cells and the result image
+    return np.count_nonzero(np.sum(coefficient_matrix, axis=2) == 1), res.astype(int)
 
 
-def print_adjacency_rules(rules):
+def print_adjacency_rules(rules: List[Dict[Tuple[int, int], Set[int]]]) -> None:
     """
     Prints all adjacency rules
-    :param rules: The
-    :return:
+    :param rules: The list of rules per direction per pattern per other pattern
     """
     for i in range(len(rules)):
         print(f"pattern number {i}:")
@@ -511,8 +624,16 @@ def print_adjacency_rules(rules):
             print(f"key: {k}, values: {v}")
 
 
-def progress_bar(max_work, curr_work):
+def progress_bar(max_work: int, curr_work: int) -> None:
+    """
+    Prints a progress bar of the algorithm run to stdout
+    :param max_work: Total work to be done, in this case - number of cells to collapse
+    :param curr_work: The amount of work done so far, in this case - number of cells collapsed
+    """
+    # Calculate percentage of work done
     percentage = int(100 * (curr_work / float(max_work)))
+
+    # Create and print the progress bar
     bar = '█' * percentage + '-' * (100 - percentage)
     print(f"\r|{bar}| {round(percentage, 2)}% ", end='\b')
 
