@@ -5,7 +5,8 @@ from typing import List, Tuple, Dict, Set, Any, Union
 
 from moviepy.editor import ImageSequenceClip
 import numpy as np
-from PIL import Image
+from PIL import Image as Img
+from PIL.Image import Image
 import os
 from matplotlib import pyplot as plt
 
@@ -38,7 +39,7 @@ def get_patterns(path: str, N: int, flip: bool = True, rotate: bool = True) -> T
      2. A list of the N by N subimages of the image, with optional flipped and rotated versions.
     """
     # Open the image using PIL and convert the image to a numpy array
-    im = np.array(Image.open(path))
+    im = np.array(Img.open(path))
 
     # Get the dimensions of the image
     image_height, image_width, channels = im.shape
@@ -63,7 +64,7 @@ def get_patterns(path: str, N: int, flip: bool = True, rotate: bool = True) -> T
     flipped, rotated = [], []
     if flip:
         # todo flip flips the channels and not the orientation
-        flipped = [np.flip(pattern, axis=axis) for axis in [0, 1, -1] for pattern in patterns]
+        flipped = [np.flip(pattern, axis=axis) for axis in [0, 1] for pattern in patterns]
     if rotate:
         rotated = [np.rot90(pattern, k=k) for k in range(1, 4) for pattern in patterns]
     if flip:
@@ -434,7 +435,7 @@ def save_image(coefficient_matrix, input_path, patterns):
     file_name = f"WFC_{ntpath.basename(input_path)}"
     upscale_parameter = DEFAULT_OUT_VID_HEIGHT // final_image.shape[0]
     upscale_size = (w * upscale_parameter, h * upscale_parameter)
-    im = Image.fromarray(final_image).resize(upscale_size, resample=Image.NONE)
+    im = Img.fromarray(final_image).resize(upscale_size, resample=Img.NONE)
     im.save(file_name)
     return final_image
 
