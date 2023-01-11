@@ -10,60 +10,73 @@ from PIL.Image import Image
 import os
 from matplotlib import pyplot as plt
 
-# todo doc
-RENDER_ITERATIONS = True
-NUM_OF_ITERATIONS_BETWEEN_RENDER = 15
+# Render while running variables
+RENDER_ITERATIONS = True  # Set to True to render images in runtime
+NUM_OF_ITERATIONS_BETWEEN_RENDER = 15  # The number of iterations between rendering in runtime
 
-SAVE_VIDEO = True
-DEFAULT_FPS = 30
-DEFAULT_VIDEO_LENGTH = 6
-DEFAULT_OUT_VID_HEIGHT = 1000
+# Video of runtime parameters
+SAVE_VIDEO = True  # Set to True to render video of the run of the algorithm
+DEFAULT_FPS = 30  # Fps of the output video
+DEFAULT_VIDEO_LENGTH = 6  # Length of the output video
+DEFAULT_OUT_VID_HEIGHT = 1000  # Vertical size (in pixels) of the output video, which will preserve the original aspect ratio
 
+# Status constants
 CONTRADICTION = -2
 WAVE_COLLAPSED = -1
 RUNNING = 0
 
 
-# todo partition code into logical sections - preprocessing, iterations, post processing, output handling
-def get_patterns(path: str, N: int, flip: bool = True, rotate: bool = True) -> Tuple[Image, Dict[tuple[Any, ...], int]]:
+def generate_patterns_and_frequencies(path: str, N: int, flip: bool = True, rotate: bool = True) -> Tuple[
+    Image, Dict[tuple[Any, ...], int]]:
     """
-    Extracts N by N subimages from an image and returns a list of the subimages.
+    Extracts N by N subimages from an image from a given path and returns a dictionary of patterns to their frequency.
     Optionally includes flipped and rotated versions of the subimages.
 
-    :param path: a string containing the path to the image file
-    :param N: an integer specifying the size of the subimages
-    :param flip: a boolean indicating whether to include flipped versions of the subimages (defaults to True)
-    :param rotate: a boolean indicating whether to include rotated versions of the subimages (defaults to True)
+    :param path: A string containing the path to the image file
+    :param N: An integer specifying the size of the subimages
+    :param flip: A boolean indicating whether to include flipped versions of the subimages (defaults to True)
+    :param rotate: A boolean indicating whether to include rotated versions of the subimages (defaults to True)
     :return: A tuple with:
      1. The input image as numpy array.
-     2. A list of the N by N subimages of the image, with optional flipped and rotated versions.
+     2. A dictionary mapping each pattern as a tuple to its respective frequency
     """
     # Open the image using PIL and convert the image to a numpy array
     im = np.array(Img.open(path))
 
-    # Get the dimensions of the image
-    image_height, image_width, channels = im.shape
-
     # Check if the array has more than 3 channels
-    if channels > 3:
+    if im.ndim > 3:
         # If the array has more than 3 channels, reduce the number of channels to 3
         im = im[:, :, :3]
 
-    # Generate a list of indices for the rows and columns of the image
-    row_indices = np.arange(image_height - N + 1)
-    col_indices = np.arange(image_width - N + 1)
+    patterns = get_patterns_from_image(im, N, flip, rotate)
 
+    patterns = [to_tuple(pattern) for pattern in patterns]
+    pattern_to_freq = {item: patterns.count(item) for item in patterns}
+    return im, pattern_to_freq
+
+
+def get_patterns_from_image(im: np.ndarray, N: int, flip: bool = True, rotate: bool = True) -> List[np.ndarray]:
+    """
+    Extracts N by N subimages from an image and returns a dictionary of patterns to their frequency.
+    Optionally includes flipped and rotated versions of the subimages.
+
+    :param im: The image from which to extract the patterns, as a numpy array
+    :param N: An integer specifying the size of the subimages
+    :param flip: A boolean indicating whether to include flipped versions of the subimages (defaults to True)
+    :param rotate: A boolean indicating whether to include rotated versions of the subimages (defaults to True)
+    :return: A list of all the patterns of size N*N inside the input image
+    """
+    # Generate a list of indices for the rows and columns of the image
+    row_indices = np.arange(im.shape[0] - N + 1)
+    col_indices = np.arange(im.shape[1] - N + 1)
     # Reshape the array of tiles into a list
     patterns = []
-
     for i in row_indices:
         for j in col_indices:
             patterns.append(im[i:i + N, j:j + N, :])
-
     # Optionally include flipped and rotated versions of the tiles
     flipped, rotated = [], []
     if flip:
-        # todo flip flips the channels and not the orientation
         flipped = [np.flip(pattern, axis=axis) for axis in [0, 1] for pattern in patterns]
     if rotate:
         rotated = [np.rot90(pattern, k=k) for k in range(1, 4) for pattern in patterns]
@@ -71,10 +84,7 @@ def get_patterns(path: str, N: int, flip: bool = True, rotate: bool = True) -> T
         patterns += flipped
     if rotate:
         patterns += rotated
-
-    patterns = [to_tuple(pattern) for pattern in patterns]
-    pattern_to_freq = {item: patterns.count(item) for item in patterns}
-    return im, pattern_to_freq
+    return patterns
 
 
 def to_tuple(array: np.ndarray) -> Union[Tuple, np.ndarray]:
@@ -348,7 +358,7 @@ def propagate(min_entropy_pos: Tuple[int, int],
 def observe(coefficient_matrix: np.ndarray, frequencies: List[int]) -> Tuple[Tuple[int, int], np.ndarray, int]:
     """
     The function preforms the 'observe' phase oof the wfc algorithm. it searches for the cell with the minimal entropy,
-    and collapses it, based on possible patterns in he cell and there respective frequencies.
+    and collapses it, based on possible patterns in the cell and there respective frequencies.
 
     :param coefficient_matrix: A numpy array representing the matrix of the wave
     :param frequencies: A list of integers representing the frequency of each pattern withing the input image
@@ -442,7 +452,7 @@ def save_image(coefficient_matrix, input_path, patterns):
 
 def initialize(input_path, out_height, out_width, pattern_size):
     directions = get_dirs(pattern_size)
-    im, pattern_to_freq = get_patterns(input_path, pattern_size, flip=False, rotate=True)
+    im, pattern_to_freq = generate_patterns_and_frequencies(input_path, pattern_size, flip=False, rotate=True)
     patterns, frequencies = np.array(np.array([to_ndarray(tup) for tup in pattern_to_freq.keys()])), list(
         pattern_to_freq.values())
     show_patterns(patterns, frequencies)
@@ -501,8 +511,8 @@ def print_adjacency_rules(rules):
             print(f"key: {k}, values: {v}")
 
 
-def progress_bar(max, curr):
-    percentage = int(100 * (curr / float(max)))
+def progress_bar(max_work, curr_work):
+    percentage = int(100 * (curr_work / float(max_work)))
     bar = '█' * percentage + '-' * (100 - percentage)
     print(f"\r|{bar}| {round(percentage, 2)}% ", end='\b')
 
