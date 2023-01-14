@@ -1,7 +1,7 @@
 <!-- PROJECT LOGO (light) -->
-![GitHub-Mark-Light](README/Wave function collapse.png)
+![GitHub-Mark-Light](https://github.com/avihuxp/WaveFunctionCollapse/blob/master/README/Wave%20function%20collapse.png)
 
-![GitHub-Mark-Dark](README/Wave function collapse.png)
+![GitHub-Mark-Dark](https://github.com/avihuxp/WaveFunctionCollapse/blob/master/README/Wave%20function%20collapse.png)
 
 
 <div align="center">
