@@ -122,7 +122,7 @@ for a full list of proposed features (and known issues).
 
 MIT License
 
-Copyright (c) 2022 avihuxp
+Copyright (c) 2023 avihuxp
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
