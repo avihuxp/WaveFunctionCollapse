@@ -47,8 +47,7 @@ product and as a video of the collapse process itself.
 
 ## Demo
 <div align="center">
-<img src="https://github.com/avihuxp/WaveFunctionCollapse/blob/master/README
-/wfc.gif?raw=true" alt="random_forest_error" width="800"/>
+<img src="https://github.com/avihuxp/WaveFunctionCollapse/blob/master/README/wfc.gif?raw=true" alt="random_forest_error" width="800"/>
 </div>
 
 For a full demo video check this [link](https://youtu.be/Ten6MIWd2DA).
