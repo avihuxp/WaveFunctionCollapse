@@ -38,7 +38,7 @@ product and as a video of the collapse process itself.
 
 - [Demo](#demo)
 - [Wave Function Collapse explained](#Wave-Function-Collapse-explained)
-- [Requirements](#Requirements-and-Installation)
+- [Requirements](#Requirements)
 - [Installation](#installation)
 - [Usage](#Usage)
 - [Features](#features)
@@ -92,7 +92,7 @@ The stages of the algorithm are as follows:
    by the collapse of the cell in the previous step updated to hold only
    valid patterns.
 4. **Repeat:** The algorithm continues to repeat steps 2 and 3 until all
-   cells - in by that the wave - are fully collapsed.
+   cells - and by that the wave - are fully collapsed.
    The output of the algorithm is the collapsed wave, meaning that at each
    cell, only one pattern is valid, and will be selected for the output image.
 
@@ -103,13 +103,13 @@ For further reading, I
 recommend [this blogpost](https://robertheaton.com/2018/12/17/wavefunction-collapse-algorithm/)
 by Robert Heaton.
 
-## Requirements and Installation
+## Requirements
 
 The program requires the following to run:
 
 - Python 3.7.3+
 
-### Installation
+## Installation
 
 1. Clone the repo
    ```bash
