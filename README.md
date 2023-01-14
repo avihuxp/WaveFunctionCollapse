@@ -37,12 +37,12 @@ product and as a video of the collapse process itself.
 ## Table of context
 
 - [Demo](#demo)
-- [Wave Function Collapse explained](#Wave Function Collapse explained)
-- [Requirements](#Requirements and Installation)
+- [Wave Function Collapse explained](#Wave-Function-Collapse-explained)
+- [Requirements](#Requirements-and-Installation)
 - [Installation](#installation)
 - [Usage](#Usage)
 - [Features](#features)
-- [Resources](#Resources and Acknowledgments)
+- [Resources](#Resources-and-Acknowledgments)
 
 ## Demo
 
@@ -54,7 +54,7 @@ For a full demo video check this [link](https://youtu.be/Ten6MIWd2DA).
 
 <p align="right">(<a href="#about-the-project">back to top</a>)</p>
 
-## Wave Function Collapse explained
+## Wave Function Collapse explained 
 
 The "wave function collapse" algorithm, as it is used in computer science
 and game design, is a technique that generates random but coherent
@@ -183,7 +183,7 @@ following sources:
    , which introduced me to the algorithm,
    though it implements the tiled variant of the algorithm.
 
-also, [OrrMatzkin](https://github.com/OrrMatzkin) deserves a noteable
+Also, [OrrMatzkin](https://github.com/OrrMatzkin) deserves a noteable
 mention for the help with the README file.
 
 <p align="right">(<a href="#about-the-project">back to top</a>)</p>
