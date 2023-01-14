@@ -60,12 +60,7 @@ For a full demo video check this [link](https://youtu.be/Ten6MIWd2DA).
 jukebox requires the followin to run:
 
 - Python 3.7.3+
-  - python-vlc 3.0.12118+
-  - adafruit-io 2.5.0+
-- VLC media player 3.0.12+
-- Adafruit IO Account 
-- IFTT Account
-- Google Assistance (Any access)
+
 
 <p align="right">(<a href="#about-the-project">back to top</a>)</p>
 
