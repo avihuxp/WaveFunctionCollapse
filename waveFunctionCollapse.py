@@ -9,7 +9,7 @@ from PIL import Image as Img
 import os
 from matplotlib import pyplot as plt
 
-USAGE_MSG = "Error: invalid input_examples. Usage: python wave_function_collapse.py <input_path> <pattern_size> <out_height> " \
+USAGE_MSG = "Error: invalid input_examples. Usage: python3 wave_function_collapse.py <input_path> <pattern_size> <out_height> " \
             "<out_width> [flip rotate]"
 
 # Output stdout messages for user

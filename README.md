@@ -15,37 +15,36 @@
 ![GitHub repo size](https://img.shields.io/github/repo-size/avihuxp/WaveFunctionCollapse)
 ![GitHub](https://img.shields.io/github/license/avihuxp/WaveFunctionCollapse)
 
-<a href="https://github.com/avihuxp/WaveFunctionCollapse/issues">Report Bug</a> ·
-    <a href="https://github.com/avihuxp/WaveFunctionCollapse/issues">Request Feature</a>
+<a href="https://github.com/avihuxp/WaveFunctionCollapse/issues">Report Bug</a>
+·
+<a href="https://github.com/avihuxp/WaveFunctionCollapse/issues">Request
+Feature</a>
 </div>
 
 ## About the project
 
-
 This project is my implementation of the "Wave Function Collapse" algorithm.
-The program is designed to generate an output pattern of arbitrary size, 
-given a small image as its input, such that at any small enviroment in the 
-output image, there is a resemblance to the input image. 
+The program is designed to generate an output pattern of arbitrary size,
+given a small image as its input, such that at any small enviroment in the
+output image, there is a resemblance to the input image.
 
-This implementation of the algorithm is written with functional programming 
-design in mind, and enables runtime rendering of the collapse process, 
-pattern extraction and viewing (unrelated to the actual algorithm run), and 
-saving the result of each algorithm run both as an image of the final 
+This implementation of the algorithm is written with functional programming
+design in mind, and enables runtime rendering of the collapse process,
+pattern extraction and viewing (unrelated to the actual algorithm run), and
+saving the result of each algorithm run both as an image of the final
 product and as a video of the collapse process itself.
 
-
 ## Table of context
+
 - [Demo](#demo)
 - [Requirements](#requirements)
-- [Getting Started](#getting-started)
-    - [Prerequisites](#prerequisites)
-    - [Installation](#installation)
-    - [Run Locally](#run-locally)   
-- [Features](#features)        
-- [Adding new Music Videos](#adding-new-music-videos)    
-       
+- [Installation](#installation)
+- [Usage](#Usage)
+- [Features](#features)
+- [Adding new Music Videos](#adding-new-music-videos)
 
 ## Demo
+
 <div align="center">
 <img src="https://github.com/avihuxp/WaveFunctionCollapse/blob/master/README/wfc.gif?raw=true" alt="random_forest_error" width="800"/>
 </div>
@@ -54,128 +53,68 @@ For a full demo video check this [link](https://youtu.be/Ten6MIWd2DA).
 
 <p align="right">(<a href="#about-the-project">back to top</a>)</p>
 
-
 ## Requirements
 
 jukebox requires the followin to run:
 
 - Python 3.7.3+
 
-
 <p align="right">(<a href="#about-the-project">back to top</a>)</p>
-
-## Getting Started
-
-Disclaimer: There is quite a lot of things that jukebox needs for running, and there is more then one way to configure it. This is how I choose to connect everything together. 
-
-You might find more detiles about how to make it all work in this article -> [fill missign]
-
-
-### Prerequisites
-
-#### Adafruit 
-
-1. Create a free account at [Adafruit IO](https://accounts.adafruit.com/users/sign_in).
-2. Create a new feed:
-    - Turn Feed History off.
-    - Remember it's name.
-3. Generate an Adafruit IO Key   
-
-#### IFTTT
-
-1. Create a free account at [IFTTT](https://ifttt.com).
-2. Create at least 3 applets trigged by Google Assistant, which sends data to Adafruit:
-    - For starting playing a music video.
-    - For stopping a music video.
-    - For displaying the jukebox available songs
-
-Again, to see an exaple check this article -> [fill missign].
-
 
 ### Installation
 
 1. Clone the repo
    ```bash
-   git clone https://github.com/OrrMatzkin/jukebox-io-adafruit.git
+   git clone https://github.com/avihuxp/WaveFunctionCollapse.git
    ```
-2. Install the required packages
-   ```bash
-   pip3 install python-vlc
-   pip3 install pip install adafruit-io
-   ```
-3. Enter your Adafruit details in `adafruit_config.json`
-   ```json
-    "ADAFRUIT_IO_KEY": "<YOUR ADAFRUIT IO KEY>",
-    "ADAFRUIT_IO_USERNAME": "<YOUR ADAFRUIT IO USERNAME>",
-    "AIO_FEED_ID": "<YOUR ADAFRUIT IO FEED NAME>" 
-   ```
-4. Make sure your device (Raspberry pi) is connected to a monitor and a set of speakers.
+2. Install the required packages - using the supplied requirements.txt, run:
+      ```bash
+      pip install -r requirements.txt
+      ```
 
+### Usage
 
-### Run Locally
-
-Go to the project directory
+Run the program, with the following usage:
 
 ```bash
- cd jukebox-io-adafruit
+ python3 wave_function_collapse.py <path_to_input_image> <pattern_size> <out_height> <out_width> [<flip> <rotate>]
 ```
 
-Start the the program
+where parameters are:
 
-```bash
- python3 jukebox.py
-```
+1. **`path_to_input_image`** - `str`: The path to the imput image for the
+   algoritm, i.e. the base pattern.
+2. **`pattern_size`** - `int`: The size of the square sub images of the input
+   image, should be as small as possible for efficiency, and large
+   enough to capture the largest basic feature in the input image.
+3. **`out_height \ out_width`** - `int`s: the size, in pixels, of the
+   output of the program.
+
+***Optional parameters***
+
+1. **`flip`** -  `bool`: Default is `False`, if `True`, the output
+   will be able to include flipped (horizontally and vertically)
+   versions of every pattern extracted from the input image.
+2. **`rotate`** -  `bool`: Default is `False`, if `True`, the output
+   will be able to include rotated (by 90&deg;, 180&deg;, and 270&deg;)
+   versions of every pattern extracted from the input image.
 
 <p align="right">(<a href="#about-the-project">back to top</a>)</p>
 
 ## Features
 
-- [x] Play/stop local video songs
-- [x] Show available songs
-- [ ] Increase/decrease volume
-- [ ] Play/stop youtube video songs (pafy integratiion)
-- [ ] Create and play a playlist of songs
-  - [ ] By artist name
-  - [ ] By a preloaded playlist 
-- [ ] Remove the need for a json data file
-- [ ] A Better score mechanism for songs
-- [ ] A "hard" integrated assistant control
+- [x] Generate outputs from both RGB and GrayScale images.
+- [x] Render images of the collapse progress in runtime using matplotlib.
+- [x] Output the result of the algorithm to a large size image for better
+  viewing experience.
+- [ ] Improved runtime performance
+- [ ] Added support for initial wave states (i.e. letting the wave function
+  know about sky / ground / walls in the input image).
+- [ ] Wrap around support for pattern extraction.
 
-
-See the [open issues](https://github.com/othneildrew/Best-README-Template/issues) for a full list of proposed features (and known issues).
-
-<p align="right">(<a href="#about-the-project">back to top</a>)</p>
-
-## Adding new Music Videos
-
-This Repo comes with 6 (great) song:
-
-1. David Bowie - Space Oddity.mp4
-2. Louis Armstrong - What a Wonderful World.mp4
-3. Marvin Gaye Tammi Terrell - Aint No Mountain High Enough.mp4
-4. Oasis - Wonderwall.mp4
-5. Roy Orbison - You Got It.mov
-6. The Police - Every Breath You Take.mp4
-
-To add a new song follow this steps:
-
-1. Download your favorite music video. *
-2. Rename the file to "\<Artist Name\> - \<Song Name\>.\<FIle Format\>" (see exmaple above).
-4. Move the file to the `songs` directory.
-3. Add the song details in `songs_data.json`
-   ```json
-   {
-        "id": 0,
-        "name": "<Song Name>",
-        "artist": "<Artist Name>",
-        "path": "<Path to song fille>",
-        "matches": ["<match1>", "<match2>", "<match3>", "<match4>",...]
-    }
-   ```
-
-\* VLC supports: ASF, AVI, FLAC, FLV, Fraps, Matroska, MP4, MPJPEG, MPEG-2 (ES, MP3), Ogg, PS, PVA, QuickTime File Format, TS, WAV, WebM
-
-\*\* The Matches field is how a song is picked after a voice command. For an example check the given `songs_data.json` file
+See
+the [open issues](https://github.com/avihuxp/WaveFunctionCollapse/issues)
+for a full list of proposed features (and known issues).
 
 <p align="right">(<a href="#about-the-project">back to top</a>)</p>
 
@@ -183,7 +122,7 @@ To add a new song follow this steps:
 
 MIT License
 
-Copyright (c) 2022 OrrMatzkin
+Copyright (c) 2022 avihuxp
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
