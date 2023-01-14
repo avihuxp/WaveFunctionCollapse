@@ -1,17 +1,19 @@
 import math
 import ntpath
 import queue
+import sys
 from typing import List, Tuple, Dict, Set, Any, Union
-
 from moviepy.editor import ImageSequenceClip
 import numpy as np
 from PIL import Image as Img
-from PIL.Image import Image
 import os
 from matplotlib import pyplot as plt
 
-WAVE_COLLAPSED_MSG = "\nwave collapsed!"
+USAGE_MSG = "Error: invalid input_examples. Usage: python wave_function_collapse.py <input_path> <pattern_size> <out_height> " \
+            "<out_width> [flip rotate]"
 
+# Output stdout messages for user
+WAVE_COLLAPSED_MSG = "\nwave collapsed!"
 FOUND_CONTRADICTION_MSG = "\nfound contradiction"
 
 # Render while running variables
@@ -30,6 +32,51 @@ WAVE_COLLAPSED = -1
 RUNNING = 0
 
 
+### Initialization functions ###
+
+
+def initialize(input_path: str,
+               pattern_size: int,
+               out_height: int,
+               out_width: int,
+               flip: bool,
+               rotate: bool) -> Tuple[np.ndarray, List[Tuple[int, int]], List[int], np.ndarray, List[Dict[Tuple[int, int],
+                                                                                                          Set[int]]]]:
+    """
+    Preforms the initialization phase of the wfc algorithm, namely - aggregate the patterns from the input_examples image,
+    calculate their frequencies and initiate the coefficient_matrix
+    :param input_path: The path to the input_examples image
+    :param pattern_size: The size (width and height) of the patterns from the input_examples image, should be as small as possible for
+    efficiency, but large enough to catch key features in the input_examples image
+    :param out_height: The height of the output image
+    :param out_width: The width of the output image
+    :param flip: Set to True to calculate all possible flips of pattern as additional patterns
+    :param rotate: Set to True to calculate all possible rotation of pattern as additional patterns
+    :return: A tuple of:
+        1. The wave matrix
+        2. A list of all possible offsets for the patterns
+        3. A list of all the frequencies of all the patterns
+        4. A ndarray of the patterns
+        5. A list of all the rules of adjacency for every pattern
+    """
+    # Get all possible offset directions for patterns
+    directions = get_dirs(pattern_size)
+
+    # Get a dictionary mapping patterns to their respective frequencies, then separate them
+    pattern_to_freq = generate_patterns_and_frequencies(input_path, pattern_size, flip, rotate)
+    patterns, frequencies = np.array(np.array([to_ndarray(tup) for tup in pattern_to_freq.keys()])), list(
+        pattern_to_freq.values())
+    # Optional: show all patterns aggregated
+    # show_patterns(patterns, frequencies)
+
+    # get all the rules of adjacency for all patterns
+    rules = get_rules(patterns, directions)
+
+    # init the coefficient_matrix, representing  the wave function
+    coefficient_matrix = np.full((out_height, out_width, len(patterns)), True, dtype=bool)
+    return coefficient_matrix, directions, frequencies, patterns, rules
+
+
 def generate_patterns_and_frequencies(path: str, N: int, flip: bool = True, rotate: bool = True) -> Dict[tuple[Any, ...], int]:
     """
     Extracts N by N subimages from an image from a given path and returns a dictionary of patterns to their frequency.
@@ -40,7 +87,7 @@ def generate_patterns_and_frequencies(path: str, N: int, flip: bool = True, rota
     :param flip: A boolean indicating whether to include flipped versions of the subimages (defaults to True)
     :param rotate: A boolean indicating whether to include rotated versions of the subimages (defaults to True)
     :return: A tuple with:
-     1. The input image as numpy array.
+     1. The input_examples image as numpy array.
      2. A dictionary mapping each pattern as a tuple to its respective frequency
     """
     # Open the image using PIL and convert the image to a numpy array
@@ -67,7 +114,7 @@ def get_patterns_from_image(im: np.ndarray, N: int, flip: bool = True, rotate: b
     :param N: An integer specifying the size of the subimages
     :param flip: A boolean indicating whether to include flipped versions of the subimages (defaults to True)
     :param rotate: A boolean indicating whether to include rotated versions of the subimages (defaults to True)
-    :return: A list of all the patterns of size N*N inside the input image
+    :return: A list of all the patterns of size N*N inside the input_examples image
     """
     # Generate a list of indices for the rows and columns of the image
     row_indices = np.arange(im.shape[0] - N + 1)
@@ -95,7 +142,7 @@ def to_tuple(array: np.ndarray) -> Union[Tuple, np.ndarray]:
     Convert array to tuple.
 
     :param array: The array to be converted. Can be a NumPy ndarray or a nested sequence.
-    :return: The input array as a tuple with the same structure.
+    :return: The input_examples array as a tuple with the same structure.
     """
     if isinstance(array, np.ndarray):
         return tuple(map(to_tuple, array))
@@ -108,7 +155,7 @@ def to_ndarray(tup: Tuple) -> Union[Tuple, np.ndarray]:
     Convert tuple to NumPy ndarray.
 
     :param tup: The tuple to be converted. Can be a nested tuple.
-    :return: The input tuple as a NumPy ndarray with the same structure.
+    :return: The input_examples tuple as a NumPy ndarray with the same structure.
     """
     if isinstance(tup, tuple):
         return np.array(list(map(to_ndarray, tup)))
@@ -116,27 +163,18 @@ def to_ndarray(tup: Tuple) -> Union[Tuple, np.ndarray]:
         return tup
 
 
-def save_patterns(patterns: np.ndarray, freq: List[int], output_path: str) -> None:
+def get_dirs(n: int) -> List[Tuple[int, int]]:
     """
-    Saves a list of image tiles to new image files in a given output path.
+    Get the coordinates around a pattern.
+    This function returns a list of all coordinates around a pattern of size `n`, starting from the top left and ending at
+    the bottom right. The center point (0, 0) is excluded from the list.
 
-    :param patterns: A list of image tiles, each represented as a numpy array.
-    :param freq: A list with the number of occurrences of pattern i in the i'th place.
-    :param output_path: A string containing the path to the output directory.
+    :param n: The size of the pattern.
+    :return: A list of coordinates around the pattern.
     """
-    # Create the output directory if it doesn't exist
-    if not os.path.exists(output_path):
-        os.makedirs(output_path)
-
-    sum_of_freq = sum(freq)
-    for i in range(len(patterns)):
-        fig, axs = plt.subplots()
-        axs.imshow(patterns[i])
-        axs.set_title(f"pattern No. {i + 1}")
-        axs.set_xticks([])
-        axs.set_yticks([])
-        fig.suptitle(f"Number of occurrences: {freq[i]}, probability: {round(freq[i] / sum_of_freq, 2)}")
-        plt.savefig(os.path.join(output_path, f'pattern_{i}.jpg'))
+    dirs = [(i, j) for j in range(-n + 1, n) for i in range(-n + 1, n)]
+    dirs.remove((0, 0))
+    return dirs
 
 
 def mask_with_offset(pattern: np.ndarray, offset: Tuple[int, int]) -> np.ndarray:
@@ -170,26 +208,12 @@ def check_for_match(p1: np.ndarray, p2: np.ndarray, offset: Tuple[int, int]) -> 
     return np.all(np.equal(p1_offset, p2_offset))
 
 
-def get_dirs(n: int) -> List[Tuple[int, int]]:
-    """
-    Get the coordinates around a pattern.
-    This function returns a list of all coordinates around a pattern of size `n`, starting from the top left and ending at
-    the bottom right. The center point (0, 0) is excluded from the list.
-
-    :param n: The size of the pattern.
-    :return: A list of coordinates around the pattern.
-    """
-    dirs = [(i, j) for j in range(-n + 1, n) for i in range(-n + 1, n)]
-    dirs.remove((0, 0))
-    return dirs
-
-
 def flip_dir(d: Tuple[int, int]) -> Tuple[int, int]:
     """
     Flips the direction of the given 2D vector d
 
     :param d: A 2D vector
-    :return: The input vector multiplied by -1,-1
+    :return: The input_examples vector multiplied by -1,-1
     """
     return -1 * d[0], -1 * d[1]
 
@@ -213,23 +237,7 @@ def get_rules(patterns: np.ndarray, directions: List[Tuple[int, int]]) -> List[D
     return rules
 
 
-def show_patterns(patterns: np.ndarray, freq: List[int]) -> None:
-    """
-    Display the patterns in a grid
-
-    :param patterns: A numpy array of patterns
-    :param freq: A list of integers representing the frequency of each pattern
-    """
-    plt.figure(figsize=(10, 10))
-    freq_sum = sum(freq)
-    for m in range(len(patterns)):
-        axs = plt.subplot(int(math.sqrt(len(patterns))), math.ceil(len(patterns) / int(math.sqrt(len(patterns)))), m + 1)
-        axs.imshow(patterns[m])
-        axs.set_xticks([])
-        axs.set_yticks([])
-        plt.title(f"num of appearances: {freq[m]}\n prob: {round(freq[m] / freq_sum, 2)}")
-    plt.show()
-
+### WaveFunctionCollapse iteration functions ###
 
 def get_min_entropy_coordinates(coefficient_matrix: np.ndarray, frequencies: List[int]) -> Tuple[int, int, int]:
     """
@@ -364,7 +372,7 @@ def observe(coefficient_matrix: np.ndarray, frequencies: List[int]) -> Tuple[Tup
     and collapses it, based on possible patterns in the cell and there respective frequencies.
 
     :param coefficient_matrix: A numpy array representing the matrix of the wave
-    :param frequencies: A list of integers representing the frequency of each pattern withing the input image
+    :param frequencies: A list of integers representing the frequency of each pattern withing the input_examples image
     :return: A tuple containing:
      1. A tuple of integers representing the position of the cell with the lowest entropy.
      2. An updated numpy array of the wave after the collapse.
@@ -390,7 +398,7 @@ def collapse_single_cell(coefficient_matrix: np.ndarray, frequencies: List[int],
     Collapses a single cell at min_entropy_pos to a single pattern, randomly weighted by the frequencies.
 
     :param coefficient_matrix: A numpy array representing the matrix of the wave
-    :param frequencies: A list of integers representing the frequency of each pattern withing the input image
+    :param frequencies: A list of integers representing the frequency of each pattern withing the input_examples image
     :param min_entropy_pos: the position of the cell to collapse
     :return: the update matrix of the wave, with the cell collapsed
     """
@@ -409,22 +417,25 @@ def collapse_single_cell(coefficient_matrix: np.ndarray, frequencies: List[int],
     return coefficient_matrix
 
 
-# todo separate function from image opening, and with ability to handle CLI
-def wave_function_collapse(input_path: str, pattern_size: int, out_height: int, out_width: int) -> np.ndarray:
+def wave_function_collapse(input_path: str, pattern_size: int, out_height: int, out_width: int, flip: bool,
+                           rotate: bool) -> np.ndarray:
     """
     The main function of the program, will preform the wave function collapse algorithm.
-    Given an input image, the function will randomly generate an output image of any size, where each pixel in the output
-    image resembles a small, local environment in the input image.
+    Given an input_examples image, the function will randomly generate an output image of any size, where each pixel in the output
+    image resembles a small, local environment in the input_examples image.
 
-    :param input_path: The path of the input image of the algorithm, from which to extract the patterns
-    :param pattern_size: The size (width and height) of the patterns from the input image, should be as small as possible for
-    efficiency, but large enough to catch key features in the input image
+    :param flip: Set to True to calculate all possible flips of pattern as additional patterns
+    :param rotate: Set to True to calculate all possible rotation of pattern as additional patterns
+    :param input_path: The path of the input_examples image of the algorithm, from which to extract the patterns
+    :param pattern_size: The size (width and height) of the patterns from the input_examples image, should be as small as possible for
+    efficiency, but large enough to catch key features in the input_examples image
     :param out_height: The height of the output image
     :param out_width: The width of the output image
     :return: A numpy array representing the output image
     """
     # Get the initial coefficient_matrix, patterns, frequencies, rules and directions of offsets
-    coefficient_matrix, directions, frequencies, patterns, rules = initialize(input_path, pattern_size, out_height, out_width)
+    coefficient_matrix, directions, frequencies, patterns, rules = initialize(input_path, pattern_size, out_height,
+                                                                              out_width, flip, rotate)
 
     # Initialize control parameters
     status = 1
@@ -444,7 +455,6 @@ def wave_function_collapse(input_path: str, pattern_size: int, out_height: int, 
             print(FOUND_CONTRADICTION_MSG)
             exit(-1)
 
-        # todo - is necessary?
         # Get current progress status
         collapsed, image = image_from_coefficients(coefficient_matrix, patterns)
 
@@ -476,11 +486,13 @@ def wave_function_collapse(input_path: str, pattern_size: int, out_height: int, 
         coefficient_matrix = propagate(min_entropy_pos, coefficient_matrix, rules, directions)
 
 
+### Rendering Functions ###
+
 def save_collapsed_wave(coefficient_matrix: np.ndarray, input_path: str, patterns: np.ndarray) -> np.ndarray:
     """
     Saves an image of the collapsed wave, with width 1000 and preserves the aspect ratio
     :param coefficient_matrix: The wave matrix
-    :param input_path: The path of the input image
+    :param input_path: The path of the input_examples image
     :param patterns: The numpy array of the patterns
     :return: An image of the collapsed wave
     """
@@ -492,7 +504,7 @@ def save_collapsed_wave(coefficient_matrix: np.ndarray, input_path: str, pattern
     final_image = patterns[np.where(coefficient_matrix[:, :])[2]][:, 0, 0, :].reshape(w, h, num_channels)
 
     # Calculate the upscale_parameter
-    upscale_parameter = (DEFAULT_OUT_VID_HEIGHT, (h * DEFAULT_OUT_VID_HEIGHT) // w)
+    upscale_parameter = (DEFAULT_OUT_VID_HEIGHT, (min(w, h) * DEFAULT_OUT_VID_HEIGHT) // max(w, h))
 
     # Create the image from the array and up sample it
     im = Img.fromarray(final_image).resize(upscale_parameter, resample=Img.NONE)
@@ -501,44 +513,6 @@ def save_collapsed_wave(coefficient_matrix: np.ndarray, input_path: str, pattern
     file_name = f"WFC_{ntpath.basename(input_path)}"
     im.save(file_name)
     return final_image
-
-
-def initialize(input_path: str,
-               pattern_size: int,
-               out_height: int,
-               out_width: int) -> Tuple[np.ndarray, List[Tuple[int, int]], List[int], np.ndarray, List[Dict[Tuple[int, int],
-                                                                                                            Set[int]]]]:
-    """
-    Preforms the initialization phase of the wfc algorithm, namely - aggregate the patterns from the input image,
-    calculate their frequencies and initiate the coefficient_matrix
-    :param input_path: The path to the input image
-    :param pattern_size: The size (width and height) of the patterns from the input image, should be as small as possible for
-    efficiency, but large enough to catch key features in the input image
-    :param out_height: The height of the output image
-    :param out_width: The width of the output image
-    :return: A tuple of:
-        1. The wave matrix
-        2. A list of all possible offsets for the patterns
-        3. A list of all the frequencies of all the patterns
-        4. A ndarray of the patterns
-        5. A list of all the rules of adjacency for every pattern
-    """
-    # Get all possible offset directions for patterns
-    directions = get_dirs(pattern_size)
-
-    # Get a dictionary mapping patterns to their respective frequencies, then separate them
-    pattern_to_freq = generate_patterns_and_frequencies(input_path, pattern_size, flip=False, rotate=True)
-    patterns, frequencies = np.array(np.array([to_ndarray(tup) for tup in pattern_to_freq.keys()])), list(
-        pattern_to_freq.values())
-    # Optional: show all patterns aggregated
-    # show_patterns(patterns, frequencies)
-
-    # get all the rules of adjacency for all patterns
-    rules = get_rules(patterns, directions)
-
-    # init the coefficient_matrix, representing  the wave function
-    coefficient_matrix = np.full((out_height, out_width, len(patterns)), True, dtype=bool)
-    return coefficient_matrix, directions, frequencies, patterns, rules
 
 
 def show_iteration(iteration: int, patterns: np.ndarray, coefficient_matrix: np.ndarray) -> np.ndarray:
@@ -564,10 +538,12 @@ def save_iterations_to_video(images: List[np.ndarray], input_path: str) -> None:
     """
     Saves all the images of iterations of the algorithm to a video
     :param images: A list of ndarrays of the sate of the wave during iterations of the algorithm
-    :param input_path: The path of the input image
+    :param input_path: The path of the input_examples image
     """
+    w, h, _ = images[0].shape
+
     # Calculate the upscale_parameter for the video
-    upscale_parameter = DEFAULT_OUT_VID_HEIGHT // images[0].shape[0]
+    upscale_parameter = DEFAULT_OUT_VID_HEIGHT // max(w, h)
 
     # Calculate the time_sample_parameter for the video, so that the output video will be in DEFAULT_FPS fps
     time_sample_parameter = 1
@@ -638,4 +614,53 @@ def progress_bar(max_work: int, curr_work: int) -> None:
     print(f"\r|{bar}| {round(percentage, 2)}% ", end='\b')
 
 
-res = wave_function_collapse('image.png', 2, 25, 25)
+def save_patterns(patterns: np.ndarray, freq: List[int], output_path: str) -> None:
+    """
+    Saves a list of image tiles to new image files in a given output path.
+
+    :param patterns: A list of image tiles, each represented as a numpy array.
+    :param freq: A list with the number of occurrences of pattern i in the i'th place.
+    :param output_path: A string containing the path to the output directory.
+    """
+    # Create the output directory if it doesn't exist
+    if not os.path.exists(output_path):
+        os.makedirs(output_path)
+
+    sum_of_freq = sum(freq)
+    for i in range(len(patterns)):
+        fig, axs = plt.subplots()
+        axs.imshow(patterns[i])
+        axs.set_title(f"pattern No. {i + 1}")
+        axs.set_xticks([])
+        axs.set_yticks([])
+        fig.suptitle(f"Number of occurrences: {freq[i]}, probability: {round(freq[i] / sum_of_freq, 2)}")
+        plt.savefig(os.path.join(output_path, f'pattern_{i}.jpg'))
+
+
+def show_patterns(patterns: np.ndarray, freq: List[int]) -> None:
+    """
+    Display the patterns in a grid
+
+    :param patterns: A numpy array of patterns
+    :param freq: A list of integers representing the frequency of each pattern
+    """
+    plt.figure(figsize=(10, 10))
+    freq_sum = sum(freq)
+    for m in range(len(patterns)):
+        axs = plt.subplot(int(math.sqrt(len(patterns))), math.ceil(len(patterns) / int(math.sqrt(len(patterns)))), m + 1)
+        axs.imshow(patterns[m])
+        axs.set_xticks([])
+        axs.set_yticks([])
+        plt.title(f"num of appearances: {freq[m]}\n prob: {round(freq[m] / freq_sum, 2)}")
+    plt.show()
+
+
+if __name__ == "__main__":
+    try:
+        input_path, pattern_size, out_height, out_width = sys.argv[1:5]
+        pattern_size, out_height, out_width = int(pattern_size), int(out_height), int(out_width)
+        flip, rotate = sys.argv[5:] if len(sys.argv) == 7 else (False, False)
+    except (TypeError, ValueError, IndexError):
+        print(USAGE_MSG)
+    else:
+        wave_function_collapse(input_path, pattern_size, out_height, out_width, flip, rotate)
