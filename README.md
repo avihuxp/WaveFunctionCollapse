@@ -1,9 +1,6 @@
 <!-- PROJECT LOGO (light) -->
 ![GitHub-Mark-Light](https://github.com/avihuxp/WaveFunctionCollapse/blob/master/README/Wave%20function%20collapse.png)
 
-![GitHub-Mark-Dark](https://github.com/avihuxp/WaveFunctionCollapse/blob/master/README/Wave%20function%20collapse.png)
-
-
 <div align="center">
 <div align="center">
 
@@ -50,9 +47,8 @@ product and as a video of the collapse process itself.
 
 ## Demo
 <div align="center">
-<a href="http://www.youtube.com/watch?feature=player_embedded&v=Ten6MIWd2DA
-" target="_blank"><img src="http://img.youtube.com/vi/Ten6MIWd2DA/0.jpg" 
-alt="IMAGE ALT TEXT HERE" width="560" height="315" border="10" /></a>
+<img src="https://github.com/avihuxp/WaveFunctionCollapse/blob/master/README
+/wfc.gif?raw=true" alt="random_forest_error" width="800"/>
 </div>
 
 For a full demo video check this [link](https://youtu.be/Ten6MIWd2DA).
