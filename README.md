@@ -38,7 +38,7 @@ product and as a video of the collapse process itself.
 
 - [Demo](#demo)
 - [Wave Function Collapse explained](#Wave Function Collapse explained)
-- [Requirements](#requirements)
+- [Requirements](#Requirements and Installation)
 - [Installation](#installation)
 - [Usage](#Usage)
 - [Features](#features)
@@ -103,13 +103,11 @@ For further reading, I
 recommend [this blogpost](https://robertheaton.com/2018/12/17/wavefunction-collapse-algorithm/)
 by Robert Heaton.
 
-## Requirements
+## Requirements and Installation
 
 The program requires the following to run:
 
 - Python 3.7.3+
-
-<p align="right">(<a href="#about-the-project">back to top</a>)</p>
 
 ### Installation
 
@@ -122,7 +120,7 @@ The program requires the following to run:
       pip install -r requirements.txt
       ```
 
-### Usage
+## Usage
 
 Run the program, with the following usage:
 
@@ -205,3 +203,5 @@ furnished to do so, subject to the following conditions:
 
 The above copyright notice and this permission notice shall be included in all
 copies or substantial portions of the Software.
+
+<p align="right">(<a href="#about-the-project">back to top</a>)</p>
