@@ -1,8 +1,5 @@
-<!-- PROJECT LOGO (light) -->
-![GitHub-Mark-Light](https://github.com/avihuxp/WaveFunctionCollapse/blob/master/README/Wave%20function%20collapse.png)
 
-<!-- PROJECT LOGO (dark) -->
-![GitHub-Mark-Dark](https://github.com/avihuxp/WaveFunctionCollapse/blob/master/README/Wave%20function%20collapse.png)
+![GitHub-Mark](https://github.com/avihuxp/WaveFunctionCollapse/blob/master/README/Wave%20function%20collapse.png)
 
 <div align="center">
 <div align="center">
@@ -164,11 +161,11 @@ changed before running:
 - `PRINT_RULES = False` - Set to True to print out all adjacency rules
 
 #### Video rendering parameters:
-- `SAVE_VIDEO = True`  # Set to True to render video of the run of the 
+- `SAVE_VIDEO = True`  - Set to True to render video of the run of the 
   algorithm
-- `DEFAULT_FPS = 30`  # Fps of the output video
-- `DEFAULT_VIDEO_LENGTH = 6`  # Length of the output video
-- `DEFAULT_OUT_VID_HEIGHT = 1000`  # Vertical size (in pixels) of the output 
+- `DEFAULT_FPS = 30`  - Fps of the output video
+- `DEFAULT_VIDEO_LENGTH = 6`  - Length of the output video
+- `DEFAULT_OUT_VID_HEIGHT = 1000`  - Vertical size (in pixels) of the output 
   video, which will preserve the original aspect ratio
 
 <p align="right">(<a href="#about-the-project">back to top</a>)</p>
