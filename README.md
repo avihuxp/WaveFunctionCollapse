@@ -1,6 +1,9 @@
 <!-- PROJECT LOGO (light) -->
 ![GitHub-Mark-Light](https://github.com/avihuxp/WaveFunctionCollapse/blob/master/README/Wave%20function%20collapse.png)
 
+<!-- PROJECT LOGO (dark) -->
+![GitHub-Mark-Dark](https://github.com/avihuxp/WaveFunctionCollapse/blob/master/README/Wave%20function%20collapse.png)
+
 <div align="center">
 <div align="center">
 
@@ -146,6 +149,27 @@ where parameters are:
 2. **`rotate`** -  `bool`: Default is `False`, if `True`, the output
    will be able to include rotated (by 90&deg;, 180&deg;, and 270&deg;)
    versions of every pattern extracted from the input image.
+
+***Other parameters inside the program***
+
+These parameters are found at the top of the python file, and can be 
+changed before running:  
+#### Render in runtime parameters:
+- `RENDER_ITERATIONS = True`  - Set to True to render images in runtime
+- `NUM_OF_ITERATIONS_BETWEEN_RENDER = 15`  - The number of iterations 
+  between rendering in runtime
+- `SHOW_PATTERNS = False` - Set to True to render all patterns and their 
+  probabilities
+- `SAVE_PATTERNS = False` - Set to True to save all patterns to file
+- `PRINT_RULES = False` - Set to True to print out all adjacency rules
+
+#### Video rendering parameters:
+- `SAVE_VIDEO = True`  # Set to True to render video of the run of the 
+  algorithm
+- `DEFAULT_FPS = 30`  # Fps of the output video
+- `DEFAULT_VIDEO_LENGTH = 6`  # Length of the output video
+- `DEFAULT_OUT_VID_HEIGHT = 1000`  # Vertical size (in pixels) of the output 
+  video, which will preserve the original aspect ratio
 
 <p align="right">(<a href="#about-the-project">back to top</a>)</p>
 

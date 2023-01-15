@@ -9,8 +9,8 @@ from PIL import Image as Img
 import os
 from matplotlib import pyplot as plt
 
-USAGE_MSG = "Error: invalid input_examples. Usage: python3 wave_function_collapse.py <input_path> <pattern_size> <out_height> " \
-            "<out_width> [flip rotate]"
+USAGE_MSG = "Error: invalid input_examples. Usage: python3 wave_function_collapse.py <input_path> <pattern_size> " \
+            "<out_height> <out_width> [flip rotate]"
 
 # Output stdout messages for user
 WAVE_COLLAPSED_MSG = "\nwave collapsed!"
@@ -19,6 +19,9 @@ FOUND_CONTRADICTION_MSG = "\nfound contradiction"
 # Render while running variables
 RENDER_ITERATIONS = True  # Set to True to render images in runtime
 NUM_OF_ITERATIONS_BETWEEN_RENDER = 15  # The number of iterations between rendering in runtime
+SHOW_PATTERNS = False  # Set to True to render all patterns and their probabilities
+SAVE_PATTERNS = False  # Set to True to save all patterns to file
+PRINT_RULES = False  # Set to True to print out all adjacency rules
 
 # Video of runtime parameters
 SAVE_VIDEO = True  # Set to True to render video of the run of the algorithm
@@ -46,8 +49,8 @@ def initialize(input_path: str,
     Preforms the initialization phase of the wfc algorithm, namely - aggregate the patterns from the input_examples image,
     calculate their frequencies and initiate the coefficient_matrix
     :param input_path: The path to the input_examples image
-    :param pattern_size: The size (width and height) of the patterns from the input_examples image, should be as small as possible for
-    efficiency, but large enough to catch key features in the input_examples image
+    :param pattern_size: The size (width and height) of the patterns from the input_examples image, should be as small as
+    possible for efficiency, but large enough to catch key features in the input_examples image
     :param out_height: The height of the output image
     :param out_width: The width of the output image
     :param flip: Set to True to calculate all possible flips of pattern as additional patterns
@@ -66,11 +69,16 @@ def initialize(input_path: str,
     pattern_to_freq = generate_patterns_and_frequencies(input_path, pattern_size, flip, rotate)
     patterns, frequencies = np.array(np.array([to_ndarray(tup) for tup in pattern_to_freq.keys()])), list(
         pattern_to_freq.values())
-    # Optional: show all patterns aggregated
-    # show_patterns(patterns, frequencies)
+    if SHOW_PATTERNS:
+        show_patterns(patterns, frequencies)
+    if SAVE_PATTERNS:
+        save_patterns(patterns, frequencies)
 
     # get all the rules of adjacency for all patterns
     rules = get_rules(patterns, directions)
+
+    if PRINT_RULES:
+        print_adjacency_rules(rules)
 
     # init the coefficient_matrix, representing  the wave function
     coefficient_matrix = np.full((out_height, out_width, len(patterns)), True, dtype=bool)
@@ -421,14 +429,14 @@ def wave_function_collapse(input_path: str, pattern_size: int, out_height: int, 
                            rotate: bool) -> np.ndarray:
     """
     The main function of the program, will preform the wave function collapse algorithm.
-    Given an input_examples image, the function will randomly generate an output image of any size, where each pixel in the output
-    image resembles a small, local environment in the input_examples image.
+    Given an input_examples image, the function will randomly generate an output image of any size, where each pixel in the
+    output image resembles a small, local environment in the input_examples image.
 
     :param flip: Set to True to calculate all possible flips of pattern as additional patterns
     :param rotate: Set to True to calculate all possible rotation of pattern as additional patterns
     :param input_path: The path of the input_examples image of the algorithm, from which to extract the patterns
-    :param pattern_size: The size (width and height) of the patterns from the input_examples image, should be as small as possible for
-    efficiency, but large enough to catch key features in the input_examples image
+    :param pattern_size: The size (width and height) of the patterns from the input_examples image, should be as small as
+    possible for efficiency, but large enough to catch key features in the input_examples image
     :param out_height: The height of the output image
     :param out_width: The width of the output image
     :return: A numpy array representing the output image
@@ -521,7 +529,7 @@ def show_iteration(iteration: int, patterns: np.ndarray, coefficient_matrix: np.
     :param iteration: The iteration of the algorithm
     :param patterns: The ndarray of the patterns
     :param coefficient_matrix: The ndarray representing the wave
-    :return: an ndarray representing the image of the wave in the current iterations, all un-collapsed cells are with the
+    :return: A ndarray representing the image of the wave in the current iterations, all un-collapsed cells are with the
     mean color of all the valid patterns for the cell.
     """
     collapsed, res = image_from_coefficients(coefficient_matrix, patterns)
@@ -537,7 +545,7 @@ def show_iteration(iteration: int, patterns: np.ndarray, coefficient_matrix: np.
 def save_iterations_to_video(images: List[np.ndarray], input_path: str) -> None:
     """
     Saves all the images of iterations of the algorithm to a video
-    :param images: A list of ndarrays of the sate of the wave during iterations of the algorithm
+    :param images: A list of ndarrays of the state of the wave during iterations of the algorithm
     :param input_path: The path of the input_examples image
     """
     w, h, _ = images[0].shape
@@ -614,7 +622,7 @@ def progress_bar(max_work: int, curr_work: int) -> None:
     print(f"\r|{bar}| {round(percentage, 2)}% ", end='\b')
 
 
-def save_patterns(patterns: np.ndarray, freq: List[int], output_path: str) -> None:
+def save_patterns(patterns: np.ndarray, freq: List[int], output_path: str = 'output') -> None:
     """
     Saves a list of image tiles to new image files in a given output path.
 
