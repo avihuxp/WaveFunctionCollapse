@@ -1,5 +1,7 @@
 
-![GitHub-Mark](https://github.com/avihuxp/WaveFunctionCollapse/blob/master/README/Wave%20function%20collapse.png)
+[//]: # (![GitHub-Mark]&#40;https://github.com/avihuxp/WaveFunctionCollapse/blob/master/README/Wave%20function%20collapse.png&#41;)
+
+<img src="README/Wave function collapse.png">
 
 <div align="center">
 <div align="center">
