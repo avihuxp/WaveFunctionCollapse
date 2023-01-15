@@ -1,7 +1,6 @@
-
 [//]: # (![GitHub-Mark]&#40;https://github.com/avihuxp/WaveFunctionCollapse/blob/master/README/Wave%20function%20collapse.png&#41;)
 
-<img src="README/Wave function collapse.png">
+<img src="README/Wave function collapse.png" alt="WaveFunctionCollapse project image">
 
 <div align="center">
 <div align="center">
@@ -56,7 +55,7 @@ For a full demo video check this [link](https://youtu.be/Ten6MIWd2DA).
 
 <p align="right">(<a href="#about-the-project">back to top</a>)</p>
 
-## Wave Function Collapse explained 
+## Wave Function Collapse explained
 
 The "wave function collapse" algorithm, as it is used in computer science
 and game design, is a technique that generates random but coherent
@@ -151,23 +150,26 @@ where parameters are:
 
 ***Other parameters inside the program***
 
-These parameters are found at the top of the python file, and can be 
-changed before running:  
+These parameters are found at the top of the python file, and can be
+changed before running:
+
 #### Render in runtime parameters:
+
 - `RENDER_ITERATIONS = True`  - Set to True to render images in runtime
-- `NUM_OF_ITERATIONS_BETWEEN_RENDER = 15`  - The number of iterations 
+- `NUM_OF_ITERATIONS_BETWEEN_RENDER = 15`  - The number of iterations
   between rendering in runtime
-- `SHOW_PATTERNS = False` - Set to True to render all patterns and their 
+- `SHOW_PATTERNS = False` - Set to True to render all patterns and their
   probabilities
 - `SAVE_PATTERNS = False` - Set to True to save all patterns to file
 - `PRINT_RULES = False` - Set to True to print out all adjacency rules
 
 #### Video rendering parameters:
-- `SAVE_VIDEO = True`  - Set to True to render video of the run of the 
+
+- `SAVE_VIDEO = True`  - Set to True to render video of the run of the
   algorithm
 - `DEFAULT_FPS = 30`  - Fps of the output video
 - `DEFAULT_VIDEO_LENGTH = 6`  - Length of the output video
-- `DEFAULT_OUT_VID_HEIGHT = 1000`  - Vertical size (in pixels) of the output 
+- `DEFAULT_OUT_VID_HEIGHT = 1000`  - Vertical size (in pixels) of the output
   video, which will preserve the original aspect ratio
 
 <p align="right">(<a href="#about-the-project">back to top</a>)</p>
