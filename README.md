@@ -190,6 +190,7 @@ changed before running:
 - [ ] Add a "Stride" option for pattern extraction, rules initialization,
   and propagation, so that this code will be able to run the tiled variant
   of the WFC algorithm.
+- [ ] add video of usage with different output options to README
 
 See
 the [open issues](https://github.com/avihuxp/WaveFunctionCollapse/issues)
