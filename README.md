@@ -126,7 +126,7 @@ The program requires the following to run:
 Run the program, with the following usage:
 
 ```bash
- python3 wave_function_collapse.py <path_to_input_image> <pattern_size> <out_height> <out_width> [<flip> <rotate>]
+ python3 wave_function_collapse.py <input_path> <pattern_size> " <out_height> <out_width> [flip] [rotate] [render_iterations] [render_video]
 ```
 
 where parameters are:
@@ -147,6 +147,12 @@ where parameters are:
 2. **`rotate`** -  `bool`: Default is `False`, if `True`, the output
    will be able to include rotated (by 90&deg;, 180&deg;, and 270&deg;)
    versions of every pattern extracted from the input image.
+3. **`render_iterations`** -  `bool`: Default is `True`, if `True`, will 
+   render the state of the wave every `NUM_OF_ITERATIONS_BETWEEN_RENDER = 15` 
+   iteration using matplotlib figure.
+4. **`render_video`** -  `bool`: Default is `True`, if `True`, after 
+   collapsing the wave, will save a video of the collapsing of the wave, 
+   see additional info in the following section. 
 
 ***Other parameters inside the program***
 
@@ -155,7 +161,6 @@ changed before running:
 
 #### Render in runtime parameters:
 
-- `RENDER_ITERATIONS = True`  - Set to True to render images in runtime
 - `NUM_OF_ITERATIONS_BETWEEN_RENDER = 15`  - The number of iterations
   between rendering in runtime
 - `SHOW_PATTERNS = False` - Set to True to render all patterns and their
@@ -165,8 +170,6 @@ changed before running:
 
 #### Video rendering parameters:
 
-- `SAVE_VIDEO = True`  - Set to True to render video of the run of the
-  algorithm
 - `DEFAULT_FPS = 30`  - Fps of the output video
 - `DEFAULT_VIDEO_LENGTH = 6`  - Length of the output video
 - `DEFAULT_OUT_VID_HEIGHT = 1000`  - Vertical size (in pixels) of the output

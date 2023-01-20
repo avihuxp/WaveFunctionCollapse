@@ -10,21 +10,19 @@ import os
 from matplotlib import pyplot as plt
 
 USAGE_MSG = "Error: invalid input_examples. Usage: python3 wave_function_collapse.py <input_path> <pattern_size> " \
-            "<out_height> <out_width> [flip rotate]"
+            "<out_height> <out_width> [flip] [rotate] [render_iterations] [render_video]"
 
 # Output stdout messages for user
 WAVE_COLLAPSED_MSG = "\nwave collapsed!"
 FOUND_CONTRADICTION_MSG = "\nfound contradiction"
 
 # Render while running variables
-RENDER_ITERATIONS = True  # Set to True to render images in runtime
 NUM_OF_ITERATIONS_BETWEEN_RENDER = 15  # The number of iterations between rendering in runtime
 SHOW_PATTERNS = False  # Set to True to render all patterns and their probabilities
 SAVE_PATTERNS = False  # Set to True to save all patterns to file
 PRINT_RULES = False  # Set to True to print out all adjacency rules
 
 # Video of runtime parameters
-SAVE_VIDEO = True  # Set to True to render video of the run of the algorithm
 DEFAULT_FPS = 30  # Fps of the output video
 DEFAULT_VIDEO_LENGTH = 6  # Length of the output video
 DEFAULT_OUT_VID_HEIGHT = 1000  # Vertical size (in pixels) of the output video, which will preserve the original aspect ratio
@@ -426,7 +424,7 @@ def collapse_single_cell(coefficient_matrix: np.ndarray, frequencies: List[int],
 
 
 def wave_function_collapse(input_path: str, pattern_size: int, out_height: int, out_width: int, flip: bool,
-                           rotate: bool) -> np.ndarray:
+                           rotate: bool, render_iterations: bool, render_video: bool) -> np.ndarray:
     """
     The main function of the program, will preform the wave function collapse algorithm.
     Given an input_examples image, the function will randomly generate an output image of any size, where each pixel in the
@@ -439,6 +437,8 @@ def wave_function_collapse(input_path: str, pattern_size: int, out_height: int, 
     possible for efficiency, but large enough to catch key features in the input_examples image
     :param out_height: The height of the output image
     :param out_width: The width of the output image
+    :param render_iterations:Set to True to render images in runtime every NUM_OF_ITERATIONS_BETWEEN_RENDER iteratoins
+    :param render_video: Set to True to render video of the run of the algorithm
     :return: A numpy array representing the output image
     """
     # Get the initial coefficient_matrix, patterns, frequencies, rules and directions of offsets
@@ -449,8 +449,8 @@ def wave_function_collapse(input_path: str, pattern_size: int, out_height: int, 
     status = 1
     iteration = 0
 
-    # If SAVE_VIDEO, initialize the images list
-    if SAVE_VIDEO:
+    # If render_video, initialize the images list
+    if render_video:
         images = [image_from_coefficients(coefficient_matrix, patterns)[1]]
 
     # Iterate over the steps of the algorithm: observe, collapse, propagate until the wave collapses
@@ -469,8 +469,8 @@ def wave_function_collapse(input_path: str, pattern_size: int, out_height: int, 
         # Update the progress bar
         progress_bar(out_height * out_width, collapsed)
 
-        # If SAVE_VIDEO, add current iteration to the images list
-        if SAVE_VIDEO and not status == WAVE_COLLAPSED:
+        # If render_video, add current iteration to the images list
+        if render_video and not status == WAVE_COLLAPSED:
             images.append(image)
 
         # If the wave collapsed, stop the iterations
@@ -478,16 +478,16 @@ def wave_function_collapse(input_path: str, pattern_size: int, out_height: int, 
             print(WAVE_COLLAPSED_MSG)
             show_iteration(iteration, patterns, coefficient_matrix)
 
-            # If SAVE_VIDEO, save the image list to a video
-            if SAVE_VIDEO:
+            # If render_video, save the image list to a video
+            if render_video:
                 images.append(image)
                 save_iterations_to_video(images, input_path)
 
             # Save the output image and return it
             return save_collapsed_wave(coefficient_matrix, input_path, patterns)
 
-        # If RENDER_ITERATIONS and NUM_OF_ITERATIONS_BETWEEN_RENDER passed from last render, render this iteration
-        if RENDER_ITERATIONS and iteration % NUM_OF_ITERATIONS_BETWEEN_RENDER == 0:
+        # If render_iterations and NUM_OF_ITERATIONS_BETWEEN_RENDER passed from last render, render this iteration
+        if render_iterations and iteration % NUM_OF_ITERATIONS_BETWEEN_RENDER == 0:
             show_iteration(iteration, patterns, coefficient_matrix)
 
         # Propagate
@@ -665,10 +665,15 @@ def show_patterns(patterns: np.ndarray, freq: List[int]) -> None:
 
 if __name__ == "__main__":
     try:
+        if len(sys.argv) > 9:
+            raise IndexError
         input_path, pattern_size, out_height, out_width = sys.argv[1:5]
         pattern_size, out_height, out_width = int(pattern_size), int(out_height), int(out_width)
-        flip, rotate = sys.argv[5:] if len(sys.argv) == 7 else (False, False)
+        flip = sys.argv[5] if len(sys.argv) >= 6 else False
+        rotate = sys.argv[6] if len(sys.argv) >= 7 else False
+        render_iterations = sys.argv[7] if len(sys.argv) >= 8 else True
+        render_video = sys.argv[8] if len(sys.argv) == 9 else True
     except (TypeError, ValueError, IndexError):
         print(USAGE_MSG)
     else:
-        wave_function_collapse(input_path, pattern_size, out_height, out_width, flip, rotate)
+        wave_function_collapse(input_path, pattern_size, out_height, out_width, flip, rotate, render_iterations, render_video)
