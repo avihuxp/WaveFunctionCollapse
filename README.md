@@ -126,7 +126,7 @@ The program requires the following to run:
 Run the program, with the following usage:
 
 ```bash
- python3 wave_function_collapse.py <input_path> <pattern_size> " <out_height> <out_width> [flip] [rotate] [render_iterations] [render_video]
+ python3 wave_function_collapse.py <input_path> <pattern_size> <out_height> <out_width> [flip] [rotate] [render_iterations] [render_video]
 ```
 
 where parameters are:
