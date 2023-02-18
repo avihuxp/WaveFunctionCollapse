@@ -453,6 +453,15 @@ def wave_function_collapse(input_path: str, pattern_size: int, out_height: int, 
     if render_video:
         images = [image_from_coefficients(coefficient_matrix, patterns)[1]]
 
+    # If render_iterations, prepare the live iterations window
+    if render_iterations:
+        fig, axs = plt.subplots()
+        fig.canvas.manager.set_window_title('Live Iteration Display')
+        plt.ion()
+        plt.show()
+        show_iteration(iteration, patterns, coefficient_matrix, fig, axs)
+        plt.pause(0.1)
+
     # Iterate over the steps of the algorithm: observe, collapse, propagate until the wave collapses
     while status != WAVE_COLLAPSED:
         iteration += 1
@@ -476,7 +485,9 @@ def wave_function_collapse(input_path: str, pattern_size: int, out_height: int, 
         # If the wave collapsed, stop the iterations
         if status == WAVE_COLLAPSED:
             print(WAVE_COLLAPSED_MSG)
-            show_iteration(iteration, patterns, coefficient_matrix)
+            plt.close()
+            plt.ioff()
+            show_collapsed(patterns, coefficient_matrix)
 
             # If render_video, save the image list to a video
             if render_video:
@@ -488,7 +499,7 @@ def wave_function_collapse(input_path: str, pattern_size: int, out_height: int, 
 
         # If render_iterations and NUM_OF_ITERATIONS_BETWEEN_RENDER passed from last render, render this iteration
         if render_iterations and iteration % NUM_OF_ITERATIONS_BETWEEN_RENDER == 0:
-            show_iteration(iteration, patterns, coefficient_matrix)
+            show_iteration(iteration, patterns, coefficient_matrix, fig, axs)
 
         # Propagate
         coefficient_matrix = propagate(min_entropy_pos, coefficient_matrix, rules, directions)
@@ -523,10 +534,31 @@ def save_collapsed_wave(coefficient_matrix: np.ndarray, input_path: str, pattern
     return final_image
 
 
-def show_iteration(iteration: int, patterns: np.ndarray, coefficient_matrix: np.ndarray) -> np.ndarray:
+def show_iteration(iteration: int, patterns: np.ndarray, coefficient_matrix: np.ndarray,
+                   fig: plt.figure, axs: plt.axes) -> np.ndarray:
     """
     Shows the state of the wave in this iteration of the algorithm
     :param iteration: The iteration of the algorithm
+    :param patterns: The ndarray of the patterns
+    :param coefficient_matrix: The ndarray representing the wave
+    :param fig: the live pyplot figure for displaying the wfc iterations
+    :param axs: the axes for the above figure
+    :return: A ndarray representing the image of the wave in the current iterations, all un-collapsed cells are with the
+    mean color of all the valid patterns for the cell.
+    """
+    collapsed, res = image_from_coefficients(coefficient_matrix, patterns)
+    w, h, _ = res.shape
+    axs.imshow(res)
+    axs.set_title(f"cells collapsed: {collapsed} out of {w * h}, done {round(100 * collapsed / (w * h), 2)}%")
+    fig.suptitle(f"iteration number: {iteration}")
+    plt.draw()
+    plt.pause(0.001)
+    return res
+
+
+def show_collapsed(patterns: np.ndarray, coefficient_matrix: np.ndarray) -> np.ndarray:
+    """
+    Shows the final (collapsed) output pattern of the wfc algorithm.
     :param patterns: The ndarray of the patterns
     :param coefficient_matrix: The ndarray representing the wave
     :return: A ndarray representing the image of the wave in the current iterations, all un-collapsed cells are with the
@@ -536,8 +568,7 @@ def show_iteration(iteration: int, patterns: np.ndarray, coefficient_matrix: np.
     w, h, _ = res.shape
     fig, axs = plt.subplots()
     axs.imshow(res)
-    axs.set_title(f"cells collapsed: {collapsed} out of {w * h}, done {round(100 * collapsed / (w * h), 2)}%")
-    fig.suptitle(f"iteration number: {iteration}")
+    fig.canvas.manager.set_window_title('Final Collapsed Pattern')
     plt.show()
     return res
 
