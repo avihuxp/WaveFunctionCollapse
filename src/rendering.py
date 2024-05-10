@@ -1,5 +1,5 @@
 import ntpath
-from typing import List, Tuple
+from typing import List
 
 import numpy as np
 from PIL import Image as Img
@@ -48,10 +48,11 @@ def show_iteration(iteration: int, patterns: np.ndarray, coefficient_matrix: np.
     :return: A ndarray representing the image of the wave in the current iterations, all un-collapsed cells are with the
     mean color of all the valid patterns for the cell.
     """
-    collapsed, res = image_from_coefficients(coefficient_matrix, patterns)
+    res = image_from_coefficients(coefficient_matrix, patterns)
     w, h, _ = res.shape
     fig, axs = plt.subplots()
     axs.imshow(res)
+    collapsed = num_of_collapsed_cells(coefficient_matrix)
     axs.set_title(f"cells collapsed: {collapsed} out of {w * h}, done {round(100 * collapsed / (w * h), 2)}%")
     fig.suptitle(f"iteration number: {iteration}")
     plt.show()
@@ -85,20 +86,20 @@ def save_iterations_to_video(images: List[np.ndarray], input_path: str) -> None:
     clip.write_videofile(out_name, fps=DEFAULT_FPS)
 
 
-def image_from_coefficients(coefficient_matrix: np.ndarray, patterns: np.ndarray) -> Tuple[int, np.ndarray]:
+def image_from_coefficients(coefficient_matrix: np.ndarray, patterns: np.ndarray) -> np.ndarray:
     """
     Generates an image of the state of the wave function mid-run. every cell is the mean of all valid patterns for it
     :param coefficient_matrix: The ndarray of the wave function
     :param patterns: The ndarray of the patterns
-    :return: A tuple:
-        1. The number of collapsed cells in the coefficient_matrix
-        2. The image of the state of the wave function
+    :return: The image of the state of the wave function
     """
     # todo find a more efficient way to do this
     r, c, num_patterns = coefficient_matrix.shape
 
     # Create the resulting image of the wave function
     res = np.empty((r, c, 3))
+
+    pattern_edges = patterns[:, 0, 0]
 
     # Iterate over all cells of coefficient_matrix
     for row in range(r):
@@ -107,10 +108,19 @@ def image_from_coefficients(coefficient_matrix: np.ndarray, patterns: np.ndarray
             valid_patterns = np.where(coefficient_matrix[row, col])[0]
 
             # Assign the corresponding cell in the output to be the mean of all valid patterns in the cell
-            res[row, col] = np.mean(patterns[valid_patterns], axis=0)[0, 0]
+            res[row, col] = np.mean(pattern_edges[valid_patterns], axis=0)
 
     # Return the number of collapsed cells and the result image
-    return np.count_nonzero(np.sum(coefficient_matrix, axis=2) == 1), res.astype(int)
+    return res.astype(int)
+
+
+def num_of_collapsed_cells(coefficient_matrix: np.ndarray) -> int:
+    """
+    Calculates the number of collapsed cells in the wave matrix
+    :param coefficient_matrix: The wave matrix
+    :return: The number of collapsed cells
+    """
+    return np.count_nonzero(np.sum(coefficient_matrix, axis=2) == 1)
 
 
 def progress_bar(max_work: int, curr_work: int) -> None:

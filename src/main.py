@@ -3,7 +3,7 @@ import numpy as np
 from src.initiatilzation import initialize
 from src.iteration import WAVE_COLLAPSED, observe, CONTRADICTION, propagate
 from src.rendering import image_from_coefficients, progress_bar, show_iteration, save_iterations_to_video, \
-    save_collapsed_wave, NUM_OF_ITERATIONS_BETWEEN_RENDER
+    save_collapsed_wave, NUM_OF_ITERATIONS_BETWEEN_RENDER, num_of_collapsed_cells
 
 WAVE_COLLAPSED_MSG = "\nwave collapsed!"
 FOUND_CONTRADICTION_MSG = "\nfound contradiction"
@@ -37,7 +37,7 @@ def wave_function_collapse(input_path: str, pattern_size: int, out_height: int, 
 
     # If render_video, initialize the images list
     if render_video:
-        images = [image_from_coefficients(coefficient_matrix, patterns)[1]]
+        images = [image_from_coefficients(coefficient_matrix, patterns)]
 
     # Iterate over the steps of the algorithm: observe, collapse, propagate until the wave collapses
     while status != WAVE_COLLAPSED:
@@ -50,10 +50,12 @@ def wave_function_collapse(input_path: str, pattern_size: int, out_height: int, 
             exit(-1)
 
         # Get current progress status
-        collapsed, image = image_from_coefficients(coefficient_matrix, patterns)
+        image = image_from_coefficients(coefficient_matrix, patterns)
+
+        number_of_collapsed_cells = num_of_collapsed_cells(coefficient_matrix)
 
         # Update the progress bar
-        progress_bar(out_height * out_width, collapsed)
+        progress_bar(out_height * out_width, number_of_collapsed_cells)
 
         # If render_video, add current iteration to the images list
         if render_video and not status == WAVE_COLLAPSED:
