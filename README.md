@@ -108,7 +108,13 @@ by Robert Heaton.
 
 The program requires the following to run:
 
-- Python 3.7.3+
+```
+Python 3.7.3+
+numpy~=1.23.4
+moviepy~=1.0.3
+Pillow~=10.0.1
+matplotlib~=3.6.1
+```
 
 ## Installation
 
@@ -147,12 +153,12 @@ where parameters are:
 2. **`rotate`** -  `bool`: Default is `False`, if `True`, the output
    will be able to include rotated (by 90&deg;, 180&deg;, and 270&deg;)
    versions of every pattern extracted from the input image.
-3. **`render_iterations`** -  `bool`: Default is `True`, if `True`, will 
-   render the state of the wave every `NUM_OF_ITERATIONS_BETWEEN_RENDER = 15` 
+3. **`render_iterations`** -  `bool`: Default is `True`, if `True`, will
+   render the state of the wave every `NUM_OF_ITERATIONS_BETWEEN_RENDER = 15`
    iteration using matplotlib figure.
-4. **`render_video`** -  `bool`: Default is `True`, if `True`, after 
-   collapsing the wave, will save a video of the collapsing of the wave, 
-   see additional info in the following section. 
+4. **`render_video`** -  `bool`: Default is `True`, if `True`, after
+   collapsing the wave, will save a video of the collapsing of the wave,
+   see additional info in the following section.
 
 ***Other parameters inside the program***
 
